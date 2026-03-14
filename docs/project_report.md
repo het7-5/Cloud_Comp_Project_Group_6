@@ -1,16 +1,27 @@
 # Project Journey & Technical Report: E-commerce Analytics with Apache Spark
 
-## 1. Project Background and Goals
-The primary objective of this project is to design and implement a complete **big data analytics pipeline** using **Apache Spark**. We chose an extensive E-commerce App Transactional Dataset to demonstrate how different Spark components—Structured APIs, Spark SQL, Spark Streaming, and Spark MLlib—work together to process, analyze, and model large-scale data. 
+## 1. Project Motivation and Goals
+
+### The "Why": Business Value and Need
+In today's highly competitive e-commerce landscape, platforms generate massive amounts of data every second—from user clicks and product views to geographic purchase trends and transaction statuses. Traditional, completely siloed relational databases struggle to process and analyze this data at scale or in real time. 
+
+There is a critical business **need** to:
+1.  **Understand the Customer Journey:** Move beyond simple sales numbers to analyze *how* customers behave. What are their click patterns? Do they drop off before purchasing? Which products and promotions actually drive value?
+2.  **Mitigate Revenue Loss:** Identify and predict why certain transactions fail so that proactive measures can be instituted.
+3.  **Personalize User Experience:** Segment the customer base into distinct cohorts to tailor marketing strategies and offer personalized recommendations.
+4.  **Act in Real-Time:** Harness streaming data to understand network traffic and user behavior right as it happens, rather than waiting for next-day batch reports.
+
+### Primary Objective
+The primary objective of this project is to address these business needs by designing and implementing a complete, end-to-end **big data analytics pipeline** using **Apache Spark**. We chose an extensive E-commerce App Transactional Dataset to practically demonstrate how different Spark components—Structured APIs, Spark SQL, Spark Streaming, and Spark MLlib—can seamlessly work together to process, analyze, and model large-scale data.
 
 **Core Project Goals:**
-*   **Data Ingestion & Processing:** Efficiently load multi-table relational data (customers, products, transactions, clickstreams), enforce exact schemas, perform data cleaning, and store the cleaned data in an optimized Parquet format.
+*   **Data Ingestion & Processing:** Efficiently load multi-table relational data (customers, products, transactions, clickstreams), enforce exact schemas, perform data cleaning, and store the cleansed data in an optimized Parquet format.
 *   **Exploratory Data Analysis (EDA):** Gain statistical insights from the raw dataset, exploring distributions and correlations.
 *   **Business Intelligence (SQL):** Use Spark SQL to answer critical business questions (e.g., Customer Lifetime Value, Promotional Effectiveness, Revenue Trends, and Funnel Analysis).
 *   **Real-time Analytics (Streaming):** Utilize Spark Structured Streaming to ingest and aggregate a live, synthesized stream of web traffic events (simulating active user clickstreams).
 *   **Machine Learning (MLlib):** Train scalable models for two main tasks:
     *   **Classification:** Predicting transaction payment success vs. failure.
-    *   **Clustering (Segmentation):** Grouping customers based on unified behavioral and transactional metrics using K-Means.
+    *   **Clustering (Segmentation):** Grouping customers based on unified behavioral and transactional metrics using K-Means clustering.
 
 ---
 
