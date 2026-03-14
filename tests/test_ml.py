@@ -26,8 +26,11 @@ def ensure_sample_data():
         os.makedirs(DATA_SAMPLE_DIR, exist_ok=True)
     csv_files = [f for f in os.listdir(DATA_SAMPLE_DIR) if f.endswith(".csv")]
     if not csv_files:
-        from src.generate_sample_data import generate_all
-        generate_all()
+        from src.generate_sample_data import generate_customers, generate_products, generate_transactions, generate_clickstream
+        generate_customers()
+        generate_products()
+        generate_transactions()
+        generate_clickstream()
     return DATA_SAMPLE_DIR
 
 
