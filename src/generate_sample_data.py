@@ -115,7 +115,7 @@ def generate_customers():
         writer = csv.writer(f)
         writer.writerow([
             "customer_id", "first_name", "last_name", "username", "email",
-            "gender", "device_type", "device_id", "device_version",
+            "gender", "birthdate", "device_type", "device_id", "device_version",
             "home_location_lat", "home_location_long", "home_location",
             "home_country", "first_join_date"
         ])
@@ -125,6 +125,7 @@ def generate_customers():
             lname = random.choice(last_names)
             username = f"{fname.lower()}{lname.lower()}{random.randint(1, 999)}"
             email = f"{username}@{'gmail.com' if random.random() < 0.6 else 'yahoo.com'}"
+            birthdate = random_date(1970, 2005).strftime("%Y-%m-%d")
             device_type = random.choice(DEVICE_TYPES)
             device_id = f"DEV-{random.randint(100000, 999999)}"
             device_version = random.choice(DEVICE_VERSIONS)
@@ -136,7 +137,7 @@ def generate_customers():
 
             writer.writerow([
                 f"CUST-{i:05d}", fname, lname, username, email, gender,
-                device_type, device_id, device_version, lat, lon,
+                birthdate, device_type, device_id, device_version, lat, lon,
                 region, country, join_date
             ])
     print(f"✓ Generated {NUM_CUSTOMERS} customers → {filepath}")
