@@ -11,10 +11,14 @@ import sys
 # PySpark 3.5.x is incompatible with Java 17.0.12+
 # (Subject.getSubject() throws UnsupportedOperationException)
 # ─────────────────────────────────────────────
-os.environ["JAVA_HOME"] = r"C:\jdk11\jdk-11.0.25+9"
-os.environ["PATH"] = os.path.join(os.environ["JAVA_HOME"], "bin") + ";" + os.environ.get("PATH", "")
-os.environ["HADOOP_HOME"] = r"C:\hadoop"
-os.environ["PATH"] = r"C:\hadoop\bin;" + os.environ["PATH"]
+if os.name == "nt":
+    if not os.environ.get("JAVA_HOME") or "jdk11" not in os.environ.get("JAVA_HOME"):
+        os.environ["JAVA_HOME"] = r"C:\jdk11\jdk-11.0.25+9"
+        os.environ["PATH"] = os.path.join(os.environ["JAVA_HOME"], "bin") + os.pathsep + os.environ.get("PATH", "")
+    
+    if not os.environ.get("HADOOP_HOME"):
+        os.environ["HADOOP_HOME"] = r"C:\hadoop"
+        os.environ["PATH"] = r"C:\hadoop\bin" + os.pathsep + os.environ["PATH"]
 
 # Clean up any conflicting Java variables
 for key in ["JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "SPARK_SUBMIT_OPTS"]:
