@@ -71,6 +71,10 @@ During the development and testing of this robust pipeline, we encountered and s
 *   **The Issue:** PySpark was interpreting commas inside a raw JSON column payload (`product_metadata`) as a CSV column separator. This misaligned the entire dataset structure downstream, replacing the `payment_status` column precisely with fragments of JSON, breaking the ML filters permanently for all data resulting in DataFrame lengths of 0.
 *   **The Solution:** Modified the data load step carefully using Spark CSV Read options `escape="\""` and `quote="\""` which strictly tells Spark to respect commas safely encapsulated inside internal quote markers. Tests passed instantly.
 
+### 7. Windows Hadoop NativeIO Crash on File Writes (Empty Output Folders)
+*   **The Issue:** When the `transformations.py` and `streaming.py` stages attempted to flush their finalized results to disk via PySpark's native `.csv()` or `.parquet()` writers, Windows crashed the JVM with a fatal `java.lang.UnsatisfiedLinkError` via `NativeIO$Windows.access0`. This caused the SQL and Streaming reports to fail silently without generating output files.
+*   **The Solution:** Completely bypassed the internal PySpark/Hadoop File I/O system for result exports. We aggregated the SQL and Streaming tables in memory, collected them natively as Pandas DataFrames (`.toPandas()`), and leveraged Python's standard file system to write the CSV files seamlessly to disk.
+
 ---
 
 ## Conclusion

@@ -56,7 +56,9 @@ Raw CSVs (data/raw/)
     │   • Customer segmentation (KMeans)
     ▼
 [6] Outputs & Visualizations
-```
+    │   • Charts & graphs in outputs/eda/
+    │   • SQL insight CSVs in outputs/sql_results/
+    │   • Live metrics CSVs in outputs/streaming/
 
 ---
 
