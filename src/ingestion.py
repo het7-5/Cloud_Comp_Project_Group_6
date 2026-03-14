@@ -193,12 +193,16 @@ def load_transactions(spark, data_dir=None):
     try:
         df = (spark.read
               .option("header", "true")
+              .option("escape", "\"")
+              .option("quote", "\"")
               .schema(TRANSACTION_SCHEMA)
               .csv(filepath))
     except Exception:
         print("   ⚠ Schema mismatch, using inferred schema")
         df = (spark.read
               .option("header", "true")
+              .option("escape", "\"")
+              .option("quote", "\"")
               .option("inferSchema", "true")
               .csv(filepath))
 
@@ -239,12 +243,16 @@ def load_clickstream(spark, data_dir=None):
     try:
         df = (spark.read
               .option("header", "true")
+              .option("escape", "\"")
+              .option("quote", "\"")
               .schema(CLICKSTREAM_SCHEMA)
               .csv(filepath))
     except Exception:
         print("   ⚠ Schema mismatch, using inferred schema")
         df = (spark.read
               .option("header", "true")
+              .option("escape", "\"")
+              .option("quote", "\"")
               .option("inferSchema", "true")
               .csv(filepath))
 
