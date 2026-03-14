@@ -242,13 +242,24 @@ def run_transformations():
     # Register views
     register_views(spark, customers_df, products_df, transactions_df, clickstream_df)
 
-    # Run queries
-    query_revenue_by_category_season(spark)
-    query_customer_ltv(spark)
-    query_promo_effectiveness(spark)
-    query_monthly_revenue_trend(spark)
-    query_clickstream_funnel(spark)
-    query_revenue_by_country_segment(spark)
+    # Run queries and save results
+    q1 = query_revenue_by_category_season(spark)
+    q1.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "revenue_by_category.csv"), index=False)
+    
+    q2 = query_customer_ltv(spark)
+    q2.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "customer_ltv.csv"), index=False)
+    
+    q3 = query_promo_effectiveness(spark)
+    q3.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "promo_effectiveness.csv"), index=False)
+    
+    q4 = query_monthly_revenue_trend(spark)
+    q4.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "monthly_revenue_trend.csv"), index=False)
+    
+    q5 = query_clickstream_funnel(spark)
+    q5.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "clickstream_funnel.csv"), index=False)
+    
+    q6 = query_revenue_by_country_segment(spark)
+    q6.toPandas().to_csv(os.path.join(SQL_OUTPUT_DIR, "revenue_by_country.csv"), index=False)
 
     print("\n" + "=" * 60)
     print("✅ ALL QUERIES EXECUTED SUCCESSFULLY")

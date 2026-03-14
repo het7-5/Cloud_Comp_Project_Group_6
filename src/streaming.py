@@ -226,16 +226,13 @@ def run_streaming(timeout_seconds=60):
                      .queryName("windowed_event_counts")
                      .start())
 
-    # ── Write Query 2 to Parquet sink ──
-    parquet_checkpoint = os.path.join(STREAM_CHECKPOINT_DIR, "traffic")
-    parquet_output = os.path.join(STREAM_OUTPUT_DIR, "traffic_breakdown")
-
+    # ── Write Query 2 to Memory sink ──
+    # Using memory sink instead of parquet to completely bypass
+    # Windows native Hadoop IO SocketExceptions during streaming
     file_query = (traffic_breakdown.writeStream
-                  .outputMode("append")
-                  .format("parquet")
-                  .option("path", parquet_output)
-                  .option("checkpointLocation", parquet_checkpoint)
-                  .queryName("traffic_breakdown_parquet")
+                  .outputMode("update")
+                  .format("memory")
+                  .queryName("traffic_memory")
                   .start())
 
     print(f"\n⏳ Streaming for {timeout_seconds} seconds…")
@@ -248,6 +245,12 @@ def run_streaming(timeout_seconds=60):
         console_query.awaitTermination(timeout_seconds)
     except Exception as e:
         print(f"   ⚠ Stream terminated: {e}")
+        # Windows Java NativeIO fallback
+        if os.name == "nt" and "UnsatisfiedLinkError" in str(e):
+            print("   ⚠ Windows Hadoop NativeIO bug detected in memory streams. Falling back to batch computation...")
+            fallback_batch_query(spark)
+            spark.stop()
+            return
 
     # Stop queries gracefully
     for q in spark.streams.active:
@@ -258,20 +261,56 @@ def run_streaming(timeout_seconds=60):
     print("📊 STREAMING SUMMARY")
     print("=" * 60)
 
-    # Read the parquet output and show summary if it exists
-    if os.path.exists(parquet_output):
-        try:
-            summary_df = spark.read.parquet(parquet_output)
-            print(f"\n   Traffic breakdown records written: {summary_df.count()}")
+    # Query the memory sink and show summary, then write safely via Pandas
+    try:
+        summary_df = spark.sql("SELECT * FROM traffic_memory")
+        if summary_df.count() > 0:
+            print(f"\n   Traffic breakdown records processed: {summary_df.count()}")
             summary_df.show(20, truncate=False)
-        except Exception:
-            print("   ⚠ No streaming output to summarise (dataset may be too small)")
-    else:
-        print("   ⚠ No parquet output generated (stream may not have processed data)")
+            
+            # Safely write the results to a CSV using Pandas (Bypassing JVM constraints)
+            csv_output = os.path.join(STREAM_OUTPUT_DIR, "traffic_breakdown_summary.csv")
+            summary_df.toPandas().to_csv(csv_output, index=False)
+            print(f"   ✓ Safely exported streaming results to {csv_output}")
+        else:
+            print("   ⚠ No streaming output to summarise (dataset may be too small or timeout too short)")
+    except Exception as e:
+        print(f"   ⚠ Could not generate streaming summary: {e}")
 
     print("\n✅ STREAMING PIPELINE COMPLETE\n")
     spark.stop()
 
+def fallback_batch_query(spark):
+    """
+    Fallback method that exactly replicates the streaming aggregation logic
+    using standard batch query, completely bypassing Hadoop NativeIO crashes.
+    """
+    print("\n" + "=" * 60)
+    print("📊 BATCH FALLBACK STREAM SUMMARY")
+    print("=" * 60)
+    from src.ingestion import CLICKSTREAM_SCHEMA
+    import glob
+    files = glob.glob(os.path.join(STREAM_INPUT_DIR, "*.json"))
+    if not files:
+        print("   ⚠ No files found in stream input directory for fallback.")
+        return
+        
+    batch_df = spark.read.schema(CLICKSTREAM_SCHEMA).json(files)
+    
+    summary_df = (batch_df
+                .groupBy("traffic_source")
+                .agg(
+                    count("*").alias("event_count"),
+                    approx_count_distinct("session_id").alias("unique_sessions")
+                ))
+    
+    csv_output = os.path.join(STREAM_OUTPUT_DIR, "traffic_breakdown_summary.csv")
+    summary_df.toPandas().to_csv(csv_output, index=False)
+    
+    print(f"\n   Traffic breakdown records processed: {summary_df.count()}")
+    summary_df.show(20, truncate=False)
+    print(f"   ✓ Safely exported fallback streaming results to {csv_output}")
+    print("\n✅ STREAMING PIPELINE COMPLETE\n")
 
 # ─────────────────────────────────────────────────────────────
 # Combined: simulate + consume
@@ -291,8 +330,16 @@ def run_full_streaming_demo(max_events=500, delay_ms=50, timeout_seconds=60):
     stream_simulator(max_events=max_events, delay_ms=delay_ms)
 
     # Step 2: Run the streaming consumer
-    run_streaming(timeout_seconds=timeout_seconds)
-
+    try:
+        run_streaming(timeout_seconds=timeout_seconds)
+    except Exception as e:
+        if os.name == "nt" and "UnsatisfiedLinkError" in str(e):
+            print("   ⚠ Windows Hadoop NativeIO bug detected in memory streams. Falling back to batch computation...")
+            from src.utils import get_spark_session
+            spark = get_spark_session("ECommerce-Streaming")
+            fallback_batch_query(spark)
+        else:
+            raise
 
 if __name__ == "__main__":
     run_full_streaming_demo()
