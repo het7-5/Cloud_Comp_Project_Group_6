@@ -263,14 +263,18 @@ def generate_clickstream():
     return filepath
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Generating sample e-commerce dataset...")
-    print("=" * 60)
+def generate_all():
+    """Generate all sample data files."""
     generate_customers()
     generate_products()
     generate_transactions()
     generate_clickstream()
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("Generating sample e-commerce dataset...")
+    print("=" * 60)
+    generate_all()
     print("=" * 60)
     print(f"All files saved to: {os.path.abspath(SAMPLE_DIR)}")
     print("=" * 60)
