@@ -32,9 +32,14 @@ echo ""
 echo "🌊 Step 4: Running Streaming Demo..."
 python src/streaming.py
 
-# Step 5: ML Pipeline
+# Step 5: Streaming ML Predictions
 echo ""
-echo "🤖 Step 5: Running ML Pipeline..."
+echo "🌊🤖 Step 5: Running Streaming ML Predictions..."
+python src/streaming_predictions.py
+
+# Step 6: ML Pipeline
+echo ""
+echo "🤖 Step 6: Running ML Pipeline..."
 python src/ml_pipeline.py
 
 echo ""

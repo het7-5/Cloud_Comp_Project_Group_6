@@ -19,6 +19,9 @@ sql:
 streaming:
 	python src/streaming.py
 
+stream-predict:
+	python src/streaming_predictions.py
+
 ml:
 	python src/ml_pipeline.py
 

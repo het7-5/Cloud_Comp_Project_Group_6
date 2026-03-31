@@ -14,25 +14,30 @@ data/raw/ (CSVs)
          │
     ┌────┴────────────────────┬──────────────────┐
     ▼                         ▼                   ▼
-┌──────────┐          ┌──────────────┐     ┌──────────────┐
-│ src/eda.py│          │src/transform.│     │src/streaming │
-│           │          │  ations.py   │     │    .py       │
-│ 5 EDA     │          │ 6 SQL        │     │ Structured   │
-│ dashboards│          │ queries      │     │ Streaming    │
-└──────────┘          └──────────────┘     └──────────────┘
-                                                  │
-         ┌────────────────────────────────────────┘
+┌──────────┐          ┌──────────────┐     ┌──────────────────────────┐
+│ src/eda.py│          │src/transform.│     │  src/streaming.py        │
+│           │          │  ations.py   │     │  (windowed aggregations) │
+│ 5 EDA     │          │ 6 SQL        │     └──────────┬───────────────┘
+│ dashboards│          │ queries      │                │
+└──────────┘          └──────────────┘                ▼
+                                          ┌──────────────────────────┐
+                                          │src/streaming_predictions │
+                                          │  Phase 1: Train RF model │
+                                          │  Phase 2: Score sessions │
+                                          │  via foreachBatch + MLlib│
+                                          └──────────┬───────────────┘
+         ┌────────────────────────────────────────────┘
          ▼
     ┌────────────────┐
-    │src/ml_pipeline │  ← Classification + Clustering
+    │src/ml_pipeline │  ← Classification + Clustering (batch)
     │    .py         │
     └────────────────┘
          │
     outputs/
-    ├── eda/          (visualization PNGs)
-    ├── sql_results/  (query results)
-    ├── streaming/    (streaming outputs)
-    └── ml/           (model metrics, cluster assignments)
+    ├── eda/            (visualization PNGs)
+    ├── sql_results/    (query results)
+    ├── streaming/      (traffic breakdown + session_predictions.csv)
+    └── ml/             (model metrics, cluster assignments)
 ```
 
 ## Component Details
@@ -92,6 +97,39 @@ Generates 5 multi-panel visualization dashboards:
 - **Query 2**: Traffic source breakdown per 5-minute window
 - Implements watermarking (10-minute late data tolerance)
 - Outputs to console (Query 1) and Parquet sink (Query 2)
+
+### 4.5. Streaming ML Predictions (`src/streaming_predictions.py`)
+
+**Spark Components**: Structured Streaming + MLlib + `foreachBatch`
+
+Two-phase pipeline that answers the question *"what predictions can we make on the live stream?"*
+
+**Phase 1 — Train (batch)**:
+- Loads historical clickstream + transactions
+- Engineers per-session features: `total_events`, `unique_event_types`, `viewed_product`, `added_to_cart`, `reached_checkout`, `applied_promo`, `searched`, `traffic_source`
+- Labels each session: `converted = 1` if it has a successful transaction, else `0`
+- Trains a **RandomForest** classifier (50 trees, max depth 6) inside a Spark `Pipeline`
+- Persists the trained `PipelineModel` to `data/models/session_conversion/`
+- Saves evaluation metrics (AUC, F1, Accuracy) to `outputs/streaming/stream_model_metrics.json`
+
+**Phase 2 — Predict (streaming)**:
+- `stream_simulator()` emits clickstream JSON files in real time
+- `spark.readStream` picks them up in micro-batches
+- `foreachBatch` callback on each micro-batch:
+  1. Aggregates raw events into session feature vectors
+  2. Loads the saved `PipelineModel`
+  3. Calls `model.transform()` to get `conversion_probability` and a `risk_label`
+  4. Labels sessions: `HIGH_CONVERSION (≥70%)`, `MEDIUM_CONVERSION (40–70%)`, `LOW_CONVERSION (<40%)`
+  5. Appends scored rows to `outputs/streaming/session_predictions.csv`
+
+| Output Column | Meaning |
+|---------------|---------|
+| `session_id` | The live session being scored |
+| `conversion_probability` | Model's P(checkout succeeds) for that session |
+| `predicted_conversion` | 1 = model predicts purchase, 0 = no purchase |
+| `risk_label` | HIGH / MEDIUM / LOW conversion bucket |
+| `batch_id` | Which streaming micro-batch scored this session |
+| `scored_at` | Timestamp of scoring |
 
 ### 5. ML Pipeline (`src/ml_pipeline.py`)
 

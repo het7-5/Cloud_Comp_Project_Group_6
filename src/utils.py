@@ -39,6 +39,7 @@ EDA_OUTPUT_DIR = os.path.join(OUTPUTS_DIR, "eda")
 SQL_OUTPUT_DIR = os.path.join(OUTPUTS_DIR, "sql_results")
 ML_OUTPUT_DIR = os.path.join(OUTPUTS_DIR, "ml")
 STREAMING_OUTPUT_DIR = os.path.join(OUTPUTS_DIR, "streaming")
+MODEL_DIR = os.path.join(PROJECT_ROOT, "data", "models")
 
 
 def get_data_dir():
@@ -59,7 +60,7 @@ def get_data_dir():
 def ensure_dirs():
     """Create all output directories if they don't exist."""
     for d in [DATA_PROCESSED_DIR, OUTPUTS_DIR, EDA_OUTPUT_DIR,
-              SQL_OUTPUT_DIR, ML_OUTPUT_DIR, STREAMING_OUTPUT_DIR]:
+              SQL_OUTPUT_DIR, ML_OUTPUT_DIR, STREAMING_OUTPUT_DIR, MODEL_DIR]:
         os.makedirs(d, exist_ok=True)
 
 
