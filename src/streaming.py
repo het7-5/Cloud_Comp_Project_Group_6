@@ -1,16 +1,13 @@
 """
-Structured Streaming Module
-============================
-Simulates real-time click stream event processing using Spark Structured Streaming.
+Advanced Structured Streaming Module
+======================================
+Demonstrates complex Spark Structured Streaming patterns:
+  1. Stream-Static JOIN: Enriches real-time click events with product catalog data
+  2. Per-Category Trending: Windowed aggregation on enriched stream
+  3. Session Anomaly Detection: Flags sessions with unusual event frequency
+  4. Multi-query streaming: Multiple concurrent streaming queries
 
-Two modes:
-  1. stream_simulator()  – writes click stream CSV rows as individual JSON files
-                           to data/stream_input/ with configurable delay
-  2. run_streaming()     – reads the JSON stream, computes windowed aggregations
-                           (events per window, active sessions, event-type distribution),
-                           and writes results to console + data/stream_output/
-
-Spark Component: Structured Streaming
+Spark Components: Structured Streaming, Stream-Static JOIN, Watermark, Window
 """
 
 import os
@@ -18,21 +15,20 @@ import sys
 import json
 import time
 import shutil
-import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.utils import (
-    get_spark_session, DATA_RAW_DIR, DATA_SAMPLE_DIR, STREAMING_OUTPUT_DIR,
-    ensure_dirs, get_data_dir, PROJECT_ROOT,
+    get_spark_session, ensure_dirs, get_data_dir, PROJECT_ROOT,
 )
+from src.ingestion import load_products
 
 from pyspark.sql.types import (
-    StructType, StructField, StringType, TimestampType,
+    StructType, StructField, StringType, IntegerType,
 )
 from pyspark.sql.functions import (
     col, window, count, approx_count_distinct, current_timestamp,
-    from_json, to_timestamp, lit, expr, sum as spark_sum,
-    when, desc,
+    from_json, to_timestamp, lit, avg, max as spark_max,
+    when, desc, round as spark_round, stddev,
 )
 
 
@@ -43,8 +39,6 @@ STREAM_INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "stream_input")
 STREAM_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "stream_output")
 STREAM_CHECKPOINT_DIR = os.path.join(PROJECT_ROOT, "data", "stream_checkpoint")
 
-
-# Schema for the JSON files produced by the simulator
 STREAM_EVENT_SCHEMA = StructType([
     StructField("session_id", StringType(), True),
     StructField("event_name", StringType(), True),
@@ -54,21 +48,21 @@ STREAM_EVENT_SCHEMA = StructType([
     StructField("event_metadata", StringType(), True),
 ])
 
+EVENT_META_SCHEMA = StructType([
+    StructField("page", StringType(), True),
+    StructField("duration_sec", IntegerType(), True),
+    StructField("product_id", IntegerType(), True),
+    StructField("query", StringType(), True),
+    StructField("promo_code", StringType(), True),
+])
+
 
 # ─────────────────────────────────────────────────────────────
-# Stream Simulator — writes JSON files that mimic real-time
+# Stream Simulator
 # ─────────────────────────────────────────────────────────────
 
 def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
-    """
-    Read click stream CSV rows and write them as JSON files to
-    STREAM_INPUT_DIR, simulating real-time event arrival.
-
-    Args:
-        max_events:  Total number of events to emit.
-        delay_ms:    Delay between batches (milliseconds).
-        batch_size:  Number of events per JSON file.
-    """
+    """Write click stream CSV rows as JSON files to simulate real-time arrival."""
     import csv
 
     data_dir = get_data_dir()
@@ -82,7 +76,6 @@ def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
     if click_file is None:
         raise FileNotFoundError(f"No click stream CSV found in {data_dir}")
 
-    # Clean previous stream input
     if os.path.exists(STREAM_INPUT_DIR):
         shutil.rmtree(STREAM_INPUT_DIR)
     os.makedirs(STREAM_INPUT_DIR, exist_ok=True)
@@ -91,8 +84,6 @@ def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
     print(f"   Source:      {click_file}")
     print(f"   Output dir:  {STREAM_INPUT_DIR}")
     print(f"   Max events:  {max_events}")
-    print(f"   Batch size:  {batch_size}")
-    print(f"   Delay:       {delay_ms}ms\n")
 
     count_written = 0
     batch_num = 0
@@ -116,7 +107,6 @@ def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
             batch.append(event)
 
             if len(batch) >= batch_size:
-                # Write batch as a JSON file (one JSON object per line)
                 batch_num += 1
                 out_path = os.path.join(STREAM_INPUT_DIR,
                                         f"events_{batch_num:06d}.json")
@@ -130,7 +120,6 @@ def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
                 batch = []
                 time.sleep(delay_ms / 1000.0)
 
-        # Write remaining events
         if batch:
             batch_num += 1
             out_path = os.path.join(STREAM_INPUT_DIR,
@@ -145,40 +134,41 @@ def stream_simulator(max_events=500, delay_ms=100, batch_size=10):
 
 
 # ─────────────────────────────────────────────────────────────
-# Structured Streaming Consumer
+# Advanced Structured Streaming Consumer
 # ─────────────────────────────────────────────────────────────
 
 def run_streaming(timeout_seconds=60):
     """
-    Run Spark Structured Streaming to consume simulated click stream events.
-
-    Performs:
-      - 5-minute sliding window aggregation of event counts
-      - Active session counting per window
-      - Event type distribution per window
-      - Traffic source breakdown per window
-
-    Results are written to console and to STREAM_OUTPUT_DIR as Parquet.
-
-    Args:
-        timeout_seconds:  How long to wait before stopping the stream.
+    Advanced streaming pipeline with:
+      - Stream-static JOIN (enriches events w/ product catalog)
+      - Per-category trending (windowed aggregation on enriched data)
+      - Session engagement scoring
+      - Traffic source breakdown
     """
     ensure_dirs()
 
-    # Clean previous outputs/checkpoints
     for d in [STREAM_OUTPUT_DIR, STREAM_CHECKPOINT_DIR]:
         if os.path.exists(d):
             shutil.rmtree(d)
         os.makedirs(d, exist_ok=True)
 
-    spark = get_spark_session("ECommerce-Streaming")
+    spark = get_spark_session("ECommerce-AdvancedStreaming")
 
     print("\n" + "=" * 60)
-    print("🌊 STARTING STRUCTURED STREAMING PIPELINE")
+    print("🌊 STARTING ADVANCED STRUCTURED STREAMING PIPELINE")
     print("=" * 60)
     print(f"\n📂 Reading stream from: {STREAM_INPUT_DIR}")
     print(f"📂 Output to:          {STREAM_OUTPUT_DIR}")
-    print(f"⏱  Timeout:            {timeout_seconds}s\n")
+    print(f"⏱  Timeout:            {timeout_seconds}s")
+
+    # ── Load static product catalog for stream-static join ──
+    data_dir = get_data_dir()
+    products_df = load_products(spark, data_dir)
+    products_df = products_df.select(
+        col("product_id").alias("prod_id"),
+        "masterCategory", "subCategory", "articleType"
+    )
+    print(f"\n📦 Loaded product catalog: {products_df.count()} products (static)")
 
     # ── Read stream ──
     raw_stream = (spark.readStream
@@ -187,159 +177,151 @@ def run_streaming(timeout_seconds=60):
                   .option("maxFilesPerTrigger", 5)
                   .load(STREAM_INPUT_DIR))
 
-    # ── Parse event_time as timestamp ──
-    events = raw_stream.withColumn(
-        "event_ts",
-        to_timestamp(col("event_time"))
+    # ── Parse event metadata + timestamp ──
+    parsed = (raw_stream
+              .withColumn("parsed_meta", from_json(col("event_metadata"), EVENT_META_SCHEMA))
+              .withColumn("event_ts", to_timestamp(col("event_time")))
+              .withColumn("duration_sec", col("parsed_meta.duration_sec"))
+              .withColumn("product_id", col("parsed_meta.product_id")))
+
+    # ── STREAM-STATIC JOIN: Enrich events with product catalog ──
+    enriched = parsed.join(
+        products_df,
+        parsed.product_id == products_df.prod_id,
+        "left"
     )
 
-    # ── Query 1: Windowed event counts (5-min tumbling window) ──
-    windowed_counts = (events
-                       .withWatermark("event_ts", "10 minutes")
-                       .groupBy(
-                           window(col("event_ts"), "5 minutes"),
-                           col("event_name"),
-                       )
-                       .agg(
-                           count("*").alias("event_count"),
-                           approx_count_distinct("session_id").alias("active_sessions"),
-                       ))
+    print("   ✓ Stream-Static JOIN configured (events × product catalog)")
 
-    # ── Query 2: Traffic source breakdown ──
-    traffic_breakdown = (events
+    # ── Query 1: Per-Category Trending (windowed, on enriched stream) ──
+    category_trending = (enriched
+                         .filter(col("masterCategory").isNotNull())
                          .withWatermark("event_ts", "10 minutes")
                          .groupBy(
                              window(col("event_ts"), "5 minutes"),
-                             col("traffic_source"),
+                             col("masterCategory"),
                          )
                          .agg(
                              count("*").alias("event_count"),
-                             approx_count_distinct("session_id").alias("unique_sessions"),
+                             approx_count_distinct("session_id").alias("active_sessions"),
+                             spark_round(avg("duration_sec"), 1).alias("avg_duration"),
                          ))
 
-    # ── Write Query 1 to console ──
-    console_query = (windowed_counts.writeStream
-                     .outputMode("update")
-                     .format("console")
-                     .option("truncate", "false")
-                     .option("numRows", 30)
-                     .queryName("windowed_event_counts")
-                     .start())
+    # ── Query 2: Session Engagement Scoring ──
+    session_scoring = (enriched
+                       .withWatermark("event_ts", "10 minutes")
+                       .groupBy(
+                           window(col("event_ts"), "5 minutes"),
+                           col("session_id"),
+                           col("traffic_source"),
+                       )
+                       .agg(
+                           count("*").alias("event_count"),
+                           approx_count_distinct("event_name").alias("unique_actions"),
+                           spark_round(avg("duration_sec"), 1).alias("avg_duration"),
+                           spark_max(when(col("event_name") == "add_to_cart", 1).otherwise(0)).alias("has_cart"),
+                           spark_max(when(col("event_name") == "checkout", 1).otherwise(0)).alias("has_checkout"),
+                       ))
 
-    # ── Write Query 2 to Memory sink ──
-    # Using memory sink instead of parquet to completely bypass
-    # Windows native Hadoop IO SocketExceptions during streaming
-    file_query = (traffic_breakdown.writeStream
-                  .outputMode("update")
-                  .format("memory")
-                  .queryName("traffic_memory")
-                  .start())
+    # ── Write Query 1 to console ──
+    q1 = (category_trending.writeStream
+          .outputMode("update")
+          .format("console")
+          .option("truncate", "false")
+          .option("numRows", 20)
+          .queryName("category_trending")
+          .start())
+
+    # ── Write Query 2 to memory sink ──
+    q2 = (session_scoring.writeStream
+          .outputMode("update")
+          .format("memory")
+          .queryName("session_scores")
+          .start())
 
     print(f"\n⏳ Streaming for {timeout_seconds} seconds…")
     print("   Active queries:")
     for q in spark.streams.active:
-        print(f"     • {q.name} (status: {q.status})")
+        print(f"     • {q.name}")
 
-    # Wait for timeout
     try:
-        console_query.awaitTermination(timeout_seconds)
+        q1.awaitTermination(timeout_seconds)
     except Exception as e:
         print(f"   ⚠ Stream terminated: {e}")
-        # Windows Java NativeIO fallback
-        if os.name == "nt" and "UnsatisfiedLinkError" in str(e):
-            print("   ⚠ Windows Hadoop NativeIO bug detected in memory streams. Falling back to batch computation...")
-            fallback_batch_query(spark)
-            spark.stop()
-            return
 
-    # Stop queries gracefully
     for q in spark.streams.active:
         q.stop()
 
     # ── Post-stream summary ──
     print("\n" + "=" * 60)
-    print("📊 STREAMING SUMMARY")
+    print("📊 ADVANCED STREAMING SUMMARY")
     print("=" * 60)
 
-    # Query the memory sink and show summary, then write safely via Pandas
     try:
-        summary_df = spark.sql("SELECT * FROM traffic_memory")
-        if summary_df.count() > 0:
-            print(f"\n   Traffic breakdown records processed: {summary_df.count()}")
-            summary_df.show(20, truncate=False)
-            
-            # Safely write the results to a CSV using Pandas (Bypassing JVM constraints)
-            csv_output = os.path.join(STREAM_OUTPUT_DIR, "traffic_breakdown_summary.csv")
-            summary_df.toPandas().to_csv(csv_output, index=False)
-            print(f"   ✓ Safely exported streaming results to {csv_output}")
-        else:
-            print("   ⚠ No streaming output to summarise (dataset may be too small or timeout too short)")
-    except Exception as e:
-        print(f"   ⚠ Could not generate streaming summary: {e}")
+        # Session scoring summary from memory sink
+        scores_df = spark.sql("SELECT * FROM session_scores")
+        if scores_df.count() > 0:
+            print(f"\n   Sessions scored: {scores_df.count()}")
 
-    print("\n✅ STREAMING PIPELINE COMPLETE\n")
+            # Anomaly detection: flag sessions with unusual event counts
+            stats = scores_df.agg(
+                avg("event_count").alias("mean_events"),
+                stddev("event_count").alias("std_events")
+            ).collect()[0]
+
+            mean_events = stats["mean_events"] or 0
+            std_events = stats["std_events"] or 1
+
+            anomaly_threshold = mean_events + 2 * std_events
+            print(f"   Anomaly threshold: > {anomaly_threshold:.1f} events/session (mean + 2σ)")
+
+            anomalous = scores_df.filter(col("event_count") > anomaly_threshold)
+            print(f"   Anomalous sessions detected: {anomalous.count()}")
+
+            if anomalous.count() > 0:
+                print("\n   🚨 Anomalous Sessions:")
+                anomalous.select("session_id", "event_count", "unique_actions",
+                                 "traffic_source").show(10, truncate=False)
+
+            # Save session scores
+            csv_path = os.path.join(STREAM_OUTPUT_DIR, "session_engagement_scores.csv")
+            scores_df.toPandas().to_csv(csv_path, index=False)
+            print(f"   ✓ Saved session scores → {csv_path}")
+        else:
+            print("   ⚠ No session scores captured")
+    except Exception as e:
+        print(f"   ⚠ Summary error: {e}")
+
+    print("\n✅ ADVANCED STREAMING PIPELINE COMPLETE\n")
+
+    # Graceful shutdown: ensure all streaming queries are fully stopped
+    # and the StateStore maintenance thread completes its current cycle
+    # before tearing down SparkEnv (prevents IllegalStateException)
+    for q in spark.streams.active:
+        q.stop()
+    time.sleep(2)
     spark.stop()
 
-def fallback_batch_query(spark):
-    """
-    Fallback method that exactly replicates the streaming aggregation logic
-    using standard batch query, completely bypassing Hadoop NativeIO crashes.
-    """
-    print("\n" + "=" * 60)
-    print("📊 BATCH FALLBACK STREAM SUMMARY")
-    print("=" * 60)
-    from src.ingestion import CLICKSTREAM_SCHEMA
-    import glob
-    files = glob.glob(os.path.join(STREAM_INPUT_DIR, "*.json"))
-    if not files:
-        print("   ⚠ No files found in stream input directory for fallback.")
-        return
-        
-    batch_df = spark.read.schema(CLICKSTREAM_SCHEMA).json(files)
-    
-    summary_df = (batch_df
-                .groupBy("traffic_source")
-                .agg(
-                    count("*").alias("event_count"),
-                    approx_count_distinct("session_id").alias("unique_sessions")
-                ))
-    
-    csv_output = os.path.join(STREAM_OUTPUT_DIR, "traffic_breakdown_summary.csv")
-    summary_df.toPandas().to_csv(csv_output, index=False)
-    
-    print(f"\n   Traffic breakdown records processed: {summary_df.count()}")
-    summary_df.show(20, truncate=False)
-    print(f"   ✓ Safely exported fallback streaming results to {csv_output}")
-    print("\n✅ STREAMING PIPELINE COMPLETE\n")
 
 # ─────────────────────────────────────────────────────────────
 # Combined: simulate + consume
 # ─────────────────────────────────────────────────────────────
 
 def run_full_streaming_demo(max_events=500, delay_ms=50, timeout_seconds=60):
-    """
-    End-to-end streaming demo:
-      1) Generate simulated events in a background thread
-      2) Start Structured Streaming consumer
-    """
+    """End-to-end streaming demo: simulate + consume."""
     print("\n" + "=" * 60)
-    print("🌊 FULL STREAMING DEMO (Simulate + Consume)")
+    print("🌊 ADVANCED STREAMING DEMO (Stream-Static Join + Anomaly Detection)")
     print("=" * 60)
 
-    # Step 1: Generate the events first (synchronously for simplicity)
     stream_simulator(max_events=max_events, delay_ms=delay_ms)
 
-    # Step 2: Run the streaming consumer
     try:
         run_streaming(timeout_seconds=timeout_seconds)
     except Exception as e:
-        if os.name == "nt" and "UnsatisfiedLinkError" in str(e):
-            print("   ⚠ Windows Hadoop NativeIO bug detected in memory streams. Falling back to batch computation...")
-            from src.utils import get_spark_session
-            spark = get_spark_session("ECommerce-Streaming")
-            fallback_batch_query(spark)
-        else:
-            raise
+        print(f"   ⚠ Streaming error: {e}")
+        import traceback
+        traceback.print_exc()
+
 
 if __name__ == "__main__":
     run_full_streaming_demo()

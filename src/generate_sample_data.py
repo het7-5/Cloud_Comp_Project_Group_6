@@ -26,6 +26,9 @@ NUM_PRODUCTS = 300
 NUM_TRANSACTIONS = 2000
 NUM_CLICKSTREAM = 5000
 
+# Shared session IDs so clickstream and transactions reference the same sessions
+SHARED_SESSION_IDS = [f"SESS-{random.randint(100000, 999999)}" for _ in range(800)]
+
 GENDERS = ["M", "F"]
 DEVICE_TYPES = ["Android", "iOS", "Web"]
 DEVICE_VERSIONS = [
@@ -192,7 +195,7 @@ def generate_transactions():
             created_at = random_date(2023, 2024).strftime("%Y-%m-%d %H:%M:%S")
             cust_id = random.choice(customer_ids)
             booking_id = f"BK-{random.randint(100000, 999999)}"
-            session_id = f"SESS-{random.randint(100000, 999999)}"
+            session_id = random.choice(SHARED_SESSION_IDS)
 
             # product_metadata is a JSON dict
             num_products = random.randint(1, 4)
@@ -231,7 +234,7 @@ def generate_transactions():
 def generate_clickstream():
     """Generate click stream table CSV with event_metadata as JSON dict."""
     filepath = os.path.join(SAMPLE_DIR, "click_stream.csv")
-    session_ids = [f"SESS-{random.randint(100000, 999999)}" for _ in range(800)]
+    session_ids = SHARED_SESSION_IDS
 
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)

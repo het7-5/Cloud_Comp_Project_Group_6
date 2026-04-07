@@ -1,19 +1,21 @@
 """
-ML Pipeline Module
-==================
-Implements two ML tasks using PySpark MLlib:
+Advanced ML Pipeline Module
+============================
+Three ML tasks using PySpark MLlib:
 
-  1. Payment Status Classification
-     - Predicts whether a transaction will succeed or fail
-     - Handles class imbalance using class weights
-     - Models: Logistic Regression, Random Forest, Gradient-Boosted Trees
-     - Evaluation: AUC, F1, Precision, Recall
+  1. Clickstream-Enhanced Payment Classification
+     - Enriches transaction features with browsing behavior from clickstream
+     - Models: Logistic Regression, Random Forest, GBT (with class weights)
 
-  2. Customer Segmentation (KMeans Clustering)
-     - Segments customers by purchasing behavior
-     - Evaluation: Silhouette Score
+  2. ALS Collaborative Filtering Recommender
+     - Builds customer×product interaction matrix from clickstream events
+     - Generates top-N product recommendations per customer
 
-Spark Component: MLlib
+  3. RFM-Based Dynamic Customer Segmentation
+     - Computes Recency/Frequency/Monetary features
+     - KMeans clustering on RFM scores vs behavioral features
+
+Spark Components: MLlib (Pipeline, ALS, KMeans, RandomForest, GBT)
 """
 
 import os
@@ -25,11 +27,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.utils import (
     get_spark_session, ML_OUTPUT_DIR, ensure_dirs, get_data_dir,
 )
-from src.ingestion import load_customers, load_transactions
+from src.ingestion import load_customers, load_transactions, load_clickstream, load_products
 
 from pyspark.sql.functions import (
     col, count, sum as spark_sum, avg, countDistinct, when, lit,
-    round as spark_round, desc,
+    round as spark_round, desc, max as spark_max, min as spark_min,
+    datediff, explode,
 )
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import (
@@ -39,15 +42,16 @@ from pyspark.ml.classification import (
     LogisticRegression, RandomForestClassifier, GBTClassifier,
 )
 from pyspark.ml.clustering import KMeans
+from pyspark.ml.recommendation import ALS
 from pyspark.ml.evaluation import (
     BinaryClassificationEvaluator,
     MulticlassClassificationEvaluator,
     ClusteringEvaluator,
+    RegressionEvaluator,
 )
 
 
 def _save_json(data, filepath):
-    """Save a Python dict/list as plain JSON file (no Spark write needed)."""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -55,73 +59,92 @@ def _save_json(data, filepath):
 
 
 # ===================================================================
-# TASK 1: Payment Status Classification
+# TASK 1: Clickstream-Enhanced Payment Classification
 # ===================================================================
 
-def build_classification_features(spark):
+def build_enhanced_features(spark):
     """
-    Build a feature DataFrame for payment status classification.
-    Joins Transaction and Customer tables, engineers features.
+    Build features that combine transaction data WITH clickstream behavior.
+    This is the key difference from the original — browsing features are added.
     """
     data_dir = get_data_dir()
     transactions_df = load_transactions(spark, data_dir)
     customers_df = load_customers(spark, data_dir)
+    clickstream_df = load_clickstream(spark, data_dir)
 
-    df = transactions_df.join(
-        customers_df.select("customer_id", "device_type", "gender"),
-        on="customer_id", how="inner",
-    )
-    df = (df
-          .filter(col("payment_status").isin("Success", "Failed"))
-          .filter(col("total_amount").isNotNull())
-          .filter(col("payment_method").isNotNull())
-          .fillna({"promo_amount": 0.0, "shipment_fee": 0.0})
-          .withColumn("has_promo", when(col("promo_amount") > 0, 1.0).otherwise(0.0))
-          .select("total_amount", "shipment_fee", "promo_amount", "has_promo",
-                  "payment_method", "device_type", "gender", "payment_status"))
-    print(f"\n   Classification feature dataset: {df.count():,} rows")
+    transactions_df.createOrReplaceTempView("transactions")
+    customers_df.createOrReplaceTempView("customers")
+    clickstream_df.createOrReplaceTempView("clickstream")
+
+    print("   Building clickstream-enhanced feature set...")
+
+    df = spark.sql("""
+        WITH session_behavior AS (
+            SELECT
+                cs.session_id,
+                COUNT(*) AS session_events,
+                COUNT(DISTINCT cs.event_name) AS unique_actions,
+                ROUND(AVG(cs.parsed_event_meta.duration_sec), 1) AS avg_browse_duration,
+                MAX(CASE WHEN cs.event_name = 'view_product' THEN 1 ELSE 0 END) AS viewed_product,
+                MAX(CASE WHEN cs.event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS added_to_cart,
+                MAX(CASE WHEN cs.event_name = 'search' THEN 1 ELSE 0 END) AS searched,
+                MAX(CASE WHEN cs.event_name = 'apply_promo' THEN 1 ELSE 0 END) AS applied_promo,
+                COUNT(DISTINCT cs.parsed_event_meta.product_id) AS products_browsed
+            FROM clickstream cs
+            GROUP BY cs.session_id
+        )
+        SELECT
+            t.total_amount,
+            t.shipment_fee,
+            t.promo_amount,
+            CASE WHEN t.promo_amount > 0 THEN 1.0 ELSE 0.0 END AS has_promo,
+            t.payment_method,
+            c.device_type,
+            c.gender,
+            t.payment_status,
+            COALESCE(sb.session_events, 0) AS session_events,
+            COALESCE(sb.unique_actions, 0) AS unique_actions,
+            COALESCE(sb.avg_browse_duration, 0) AS avg_browse_duration,
+            COALESCE(sb.viewed_product, 0) AS viewed_product,
+            COALESCE(sb.added_to_cart, 0) AS added_to_cart,
+            COALESCE(sb.searched, 0) AS searched,
+            COALESCE(sb.applied_promo, 0) AS applied_promo,
+            COALESCE(sb.products_browsed, 0) AS products_browsed
+        FROM transactions t
+        JOIN customers c ON t.customer_id = c.customer_id
+        LEFT JOIN session_behavior sb ON t.session_id = sb.session_id
+        WHERE t.payment_status IN ('Success', 'Failed')
+          AND t.total_amount IS NOT NULL
+    """)
+
+    df = df.fillna({
+        "promo_amount": 0.0, "shipment_fee": 0.0,
+        "session_events": 0, "unique_actions": 0,
+        "avg_browse_duration": 0.0, "products_browsed": 0,
+    })
+
+    print(f"   Enhanced feature dataset: {df.count():,} rows")
+    print(f"   Features: transaction (4) + browsing behavior (8) + demographics (3) = 15")
     df.groupBy("payment_status").count().show()
     return df
 
 
 def run_classification(spark):
-    """Train and evaluate payment status classifiers with class weighting."""
+    """Train payment classifiers with clickstream-enhanced features."""
     print("\n" + "=" * 60)
-    print("  TASK 1: PAYMENT STATUS CLASSIFICATION")
+    print("  TASK 1: CLICKSTREAM-ENHANCED PAYMENT CLASSIFICATION")
     print("=" * 60)
 
-    df = build_classification_features(spark)
+    df = build_enhanced_features(spark)
 
-    total_rows = df.count()
-    print(f"\n   Total features: {total_rows:,} rows")
-
-    # Sample for local mode
-    MAX_ROWS = 50_000
-    if total_rows > MAX_ROWS:
-        df = df.sample(False, MAX_ROWS / total_rows, seed=42)
-        print(f"   Sampled to ~{df.count():,} rows for local mode")
-
-    # --- Handle class imbalance ---
-    # Count each class
+    # Class weights
     class_counts = df.groupBy("payment_status").count().collect()
     class_dict = {row.payment_status: row["count"] for row in class_counts}
     total = sum(class_dict.values())
     n_classes = len(class_dict)
-    print(f"   Class distribution: {class_dict}")
-
-    # Compute balanced class weights: total / (n_classes * count_per_class)
-    # This gives higher weight to the minority class (Failed)
-    weight_map = {}
-    for cls, cnt in class_dict.items():
-        weight_map[cls] = total / (n_classes * cnt)
+    weight_map = {cls: total / (n_classes * cnt) for cls, cnt in class_dict.items()}
     print(f"   Class weights: {weight_map}")
 
-    # Add weight column
-    weight_expr = when(col("payment_status") == "Success", weight_map.get("Success", 1.0))
-    for cls, wt in weight_map.items():
-        if cls != "Success":
-            weight_expr = weight_expr.when(col("payment_status") == cls, wt)
-    # Simpler: use when/otherwise
     df = df.withColumn(
         "classWeight",
         when(col("payment_status") == "Failed", weight_map.get("Failed", 1.0))
@@ -131,48 +154,45 @@ def run_classification(spark):
     df = df.repartition(2).cache()
     df.count()
 
-    # Preprocessing pipeline
     cat_cols = ["payment_method", "device_type", "gender"]
     indexers = [StringIndexer(inputCol=c, outputCol=f"{c}_idx", handleInvalid="keep")
                 for c in cat_cols]
     label_indexer = StringIndexer(inputCol="payment_status", outputCol="label")
+
+    # Enhanced feature columns: transaction + browsing + categorical
+    numeric_features = [
+        "total_amount", "shipment_fee", "promo_amount", "has_promo",
+        "session_events", "unique_actions", "avg_browse_duration",
+        "viewed_product", "added_to_cart", "searched", "applied_promo",
+        "products_browsed",
+    ]
     assembler = VectorAssembler(
-        inputCols=["total_amount", "shipment_fee", "promo_amount", "has_promo"] +
-                  [f"{c}_idx" for c in cat_cols],
-        outputCol="raw_features")
+        inputCols=numeric_features + [f"{c}_idx" for c in cat_cols],
+        outputCol="raw_features", handleInvalid="keep")
     scaler = StandardScaler(inputCol="raw_features", outputCol="features",
                             withStd=True, withMean=False)
     preprocessing = indexers + [label_indexer, assembler, scaler]
 
-    # Train/test split
     train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
     train_df = train_df.cache()
     test_df = test_df.cache()
     print(f"   Train: {train_df.count():,}  |  Test: {test_df.count():,}")
-    df.groupBy("payment_status").count().show()
 
-    # Evaluators
     auc_eval = BinaryClassificationEvaluator(labelCol="label", metricName="areaUnderROC")
     f1_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="f1")
-    prec_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="weightedPrecision")
-    rec_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="weightedRecall")
     acc_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="accuracy")
 
-    # Models -- use weightCol for class imbalance handling
     models = [
         ("Logistic Regression", LogisticRegression(
-            featuresCol="features", labelCol="label", weightCol="classWeight",
-            maxIter=20)),
+            featuresCol="features", labelCol="label", weightCol="classWeight", maxIter=20)),
         ("Random Forest", RandomForestClassifier(
-            featuresCol="features", labelCol="label",
-            numTrees=20, seed=42)),
+            featuresCol="features", labelCol="label", numTrees=30, maxDepth=8, seed=42)),
         ("Gradient-Boosted Trees", GBTClassifier(
             featuresCol="features", labelCol="label", weightCol="classWeight",
-            maxIter=10, seed=42)),
+            maxIter=15, seed=42)),
     ]
 
     all_results = []
-
     for name, model in models:
         print(f"\n   -- Training {name} --")
         try:
@@ -184,120 +204,254 @@ def run_classification(spark):
                 "model": name,
                 "AUC": round(auc_eval.evaluate(preds), 4),
                 "F1": round(f1_eval.evaluate(preds), 4),
-                "Precision": round(prec_eval.evaluate(preds), 4),
-                "Recall": round(rec_eval.evaluate(preds), 4),
                 "Accuracy": round(acc_eval.evaluate(preds), 4),
+                "features_used": numeric_features + [f"{c}_idx" for c in cat_cols],
             }
-
-            print(f"      AUC:       {metrics['AUC']}")
-            print(f"      F1:        {metrics['F1']}")
-            print(f"      Precision: {metrics['Precision']}")
-            print(f"      Recall:    {metrics['Recall']}")
-            print(f"      Accuracy:  {metrics['Accuracy']}")
-
-            # Confusion matrix
-            print(f"\n      Confusion Matrix ({name}):")
-            cm_rows = preds.groupBy("payment_status", "prediction").count().collect()
-            cm_data = [{"payment_status": r.payment_status,
-                        "prediction": float(r.prediction),
-                        "count": r["count"]} for r in cm_rows]
-            for row in cm_data:
-                print(f"        {row}")
-            metrics["confusion_matrix"] = cm_data
+            print(f"      AUC: {metrics['AUC']}  |  F1: {metrics['F1']}  |  Acc: {metrics['Accuracy']}")
             all_results.append(metrics)
-
-            # Save this model's result immediately
             _save_json(metrics, os.path.join(
                 ML_OUTPUT_DIR, f"classification_{name.replace(' ', '_').lower()}.json"))
-
         except Exception as exc:
             print(f"      ERROR: {exc}")
             traceback.print_exc()
-            all_results.append({
-                "model": name, "AUC": 0.0, "F1": 0.0,
-                "Precision": 0.0, "Recall": 0.0, "Accuracy": 0.0,
-                "error": str(exc),
-            })
+            all_results.append({"model": name, "error": str(exc)})
 
-    # Save combined results
     _save_json(all_results, os.path.join(ML_OUTPUT_DIR, "classification_results.json"))
 
-    # Print comparison table
     print("\n" + "-" * 60)
-    print("  CLASSIFICATION RESULTS COMPARISON")
+    print("  CLASSIFICATION RESULTS (with clickstream features)")
     print("-" * 60)
     print(f"  {'Model':<30} {'AUC':>7} {'F1':>7} {'Acc':>7}")
     print("  " + "-" * 56)
     for r in all_results:
-        print(f"  {r['model']:<30} {r.get('AUC',0):>7.4f} {r.get('F1',0):>7.4f} {r.get('Accuracy',0):>7.4f}")
+        if "AUC" in r:
+            print(f"  {r['model']:<30} {r['AUC']:>7.4f} {r['F1']:>7.4f} {r['Accuracy']:>7.4f}")
 
     train_df.unpersist()
     test_df.unpersist()
     df.unpersist()
-
     return all_results
 
 
 # ===================================================================
-# TASK 2: Customer Segmentation (KMeans Clustering)
+# TASK 2: ALS Collaborative Filtering Recommender
 # ===================================================================
 
-def build_clustering_features(spark):
+def run_als_recommendations(spark):
     """
-    Build customer-level feature DataFrame for clustering.
-    Features: total_spend, num_transactions, avg_order_value,
-              num_sessions, promo_usage_rate, payment_methods_used
+    Build a collaborative filtering recommender using ALS on
+    customer × product interaction matrix from clickstream events.
     """
+    print("\n" + "=" * 60)
+    print("  TASK 2: ALS COLLABORATIVE FILTERING RECOMMENDER")
+    print("=" * 60)
+
+    data_dir = get_data_dir()
+    clickstream_df = load_clickstream(spark, data_dir)
+    transactions_df = load_transactions(spark, data_dir)
+    products_df = load_products(spark, data_dir)
+
+    clickstream_df.createOrReplaceTempView("clickstream")
+    transactions_df.createOrReplaceTempView("transactions")
+    products_df.createOrReplaceTempView("products")
+
+    # Build interaction matrix: customer × product with implicit rating
+    print("\n   Building customer-product interaction matrix...")
+    interactions = spark.sql("""
+        SELECT
+            t.customer_id,
+            cs.parsed_event_meta.product_id AS product_id,
+            MAX(CASE
+                WHEN cs.event_name = 'checkout' THEN 5.0
+                WHEN cs.event_name = 'add_to_cart' THEN 3.0
+                WHEN cs.event_name = 'wishlist_add' THEN 2.0
+                WHEN cs.event_name = 'view_product' THEN 1.0
+                ELSE 0.5
+            END) AS rating
+        FROM clickstream cs
+        JOIN transactions t ON cs.session_id = t.session_id
+        WHERE cs.parsed_event_meta.product_id IS NOT NULL
+        GROUP BY t.customer_id, cs.parsed_event_meta.product_id
+    """)
+
+    n_interactions = interactions.count()
+    n_users = interactions.select("customer_id").distinct().count()
+    n_items = interactions.select("product_id").distinct().count()
+    print(f"   Interactions: {n_interactions:,}")
+    print(f"   Unique customers: {n_users:,}")
+    print(f"   Unique products: {n_items:,}")
+    print(f"   Sparsity: {(1 - n_interactions / (n_users * n_items)) * 100:.1f}%")
+
+    if n_interactions < 10:
+        print("   ⚠ Too few interactions for ALS. Skipping.")
+        return None
+
+    # Index customer_id to integer for ALS
+    user_indexer = StringIndexer(inputCol="customer_id", outputCol="user_id")
+    user_model = user_indexer.fit(interactions)
+    indexed = user_model.transform(interactions)
+    indexed = indexed.withColumn("user_id", col("user_id").cast("int"))
+    indexed = indexed.withColumn("product_id", col("product_id").cast("int"))
+
+    # Store mapping for later
+    user_mapping = indexed.select("customer_id", "user_id").distinct()
+
+    # Train/test split
+    train, test = indexed.randomSplit([0.8, 0.2], seed=42)
+    train = train.cache()
+    test = test.cache()
+    print(f"   Train: {train.count():,}  |  Test: {test.count():,}")
+
+    # Train ALS
+    print("   Training ALS model...")
+    als = ALS(
+        userCol="user_id",
+        itemCol="product_id",
+        ratingCol="rating",
+        maxIter=10,
+        regParam=0.1,
+        rank=10,
+        coldStartStrategy="drop",
+        seed=42
+    )
+    model = als.fit(train)
+
+    # Evaluate
+    predictions = model.transform(test)
+    evaluator = RegressionEvaluator(
+        predictionCol="prediction", labelCol="rating", metricName="rmse")
+    rmse = round(evaluator.evaluate(predictions), 4)
+    print(f"   RMSE on test set: {rmse}")
+
+    # Generate top-5 recommendations for all users
+    print("\n   Generating top-5 recommendations per customer...")
+    user_recs = model.recommendForAllUsers(5)
+
+    # Explode recommendations and join back to get customer_id + product names
+    recs_exploded = user_recs.select(
+        col("user_id"),
+        explode(col("recommendations")).alias("rec")
+    ).select(
+        col("user_id"),
+        col("rec.product_id").alias("rec_product_id"),
+        spark_round(col("rec.rating"), 3).alias("predicted_score")
+    )
+
+    # Join with user mapping and product names
+    named_recs = (recs_exploded
+                  .join(user_mapping, "user_id")
+                  .join(products_df.select(
+                      col("product_id").alias("rec_product_id"),
+                      "productDisplayName", "masterCategory", "subCategory"),
+                      "rec_product_id")
+                  .select("customer_id", "productDisplayName", "masterCategory",
+                          "subCategory", "predicted_score")
+                  .orderBy("customer_id", desc("predicted_score")))
+
+    print("\n   Sample Recommendations:")
+    named_recs.show(20, truncate=False)
+
+    # Save results
+    als_results = {
+        "model": "ALS Collaborative Filtering",
+        "interactions": n_interactions,
+        "unique_users": n_users,
+        "unique_items": n_items,
+        "RMSE": rmse,
+        "rank": 10,
+        "regParam": 0.1,
+        "maxIter": 10,
+    }
+    _save_json(als_results, os.path.join(ML_OUTPUT_DIR, "als_recommender_results.json"))
+
+    recs_csv = os.path.join(ML_OUTPUT_DIR, "als_recommendations.csv")
+    named_recs.toPandas().to_csv(recs_csv, index=False)
+    print(f"   Saved: {recs_csv}")
+
+    train.unpersist()
+    test.unpersist()
+    return als_results
+
+
+# ===================================================================
+# TASK 3: RFM-Based Dynamic Customer Segmentation
+# ===================================================================
+
+def run_rfm_segmentation(spark):
+    """KMeans clustering on RFM features + browsing behavior."""
+    print("\n" + "=" * 60)
+    print("  TASK 3: RFM-BASED DYNAMIC CUSTOMER SEGMENTATION")
+    print("=" * 60)
+
     data_dir = get_data_dir()
     transactions_df = load_transactions(spark, data_dir)
     customers_df = load_customers(spark, data_dir)
+    clickstream_df = load_clickstream(spark, data_dir)
 
-    customer_metrics = (transactions_df
-                        .filter(col("payment_status") == "Success")
-                        .groupBy("customer_id")
-                        .agg(
-                            spark_sum("total_amount").alias("total_spend"),
-                            count("*").alias("num_transactions"),
-                            avg("total_amount").alias("avg_order_value"),
-                            countDistinct("session_id").alias("num_sessions"),
-                            spark_sum("promo_amount").alias("total_promo_used"),
-                            countDistinct("payment_method").alias("payment_methods_used"),
-                        ))
+    transactions_df.createOrReplaceTempView("transactions")
+    customers_df.createOrReplaceTempView("customers")
+    clickstream_df.createOrReplaceTempView("clickstream")
 
-    customer_metrics = customer_metrics.withColumn(
-        "promo_usage_rate",
-        when(col("total_spend") > 0,
-             col("total_promo_used") / col("total_spend")).otherwise(0.0))
+    print("\n   Building RFM + behavioral features...")
+    cluster_df = spark.sql("""
+        WITH date_ref AS (
+            SELECT MAX(created_at) AS max_date FROM transactions
+        ),
+        rfm AS (
+            SELECT
+                t.customer_id,
+                DATEDIFF(dr.max_date, MAX(t.created_at)) AS recency_days,
+                COUNT(DISTINCT t.booking_id) AS frequency,
+                ROUND(SUM(t.total_amount), 2) AS monetary,
+                ROUND(AVG(t.total_amount), 2) AS avg_order_value,
+                COUNT(DISTINCT t.payment_method) AS payment_methods_used,
+                ROUND(SUM(t.promo_amount), 2) AS total_promo_used
+            FROM transactions t
+            CROSS JOIN date_ref dr
+            WHERE t.payment_status = 'Success'
+            GROUP BY t.customer_id, dr.max_date
+        ),
+        browsing AS (
+            SELECT
+                t.customer_id,
+                COUNT(DISTINCT cs.session_id) AS browse_sessions,
+                COALESCE(ROUND(AVG(cs.parsed_event_meta.duration_sec), 1), 0) AS avg_browse_time,
+                COUNT(DISTINCT cs.parsed_event_meta.product_id) AS products_browsed,
+                COUNT(DISTINCT cs.event_name) AS unique_event_types
+            FROM transactions t
+            JOIN clickstream cs ON t.session_id = cs.session_id
+            GROUP BY t.customer_id
+        )
+        SELECT
+            r.customer_id,
+            r.recency_days,
+            r.frequency,
+            r.monetary,
+            r.avg_order_value,
+            r.payment_methods_used,
+            r.total_promo_used,
+            COALESCE(b.browse_sessions, 0) AS browse_sessions,
+            COALESCE(b.avg_browse_time, 0) AS avg_browse_time,
+            COALESCE(b.products_browsed, 0) AS products_browsed,
+            COALESCE(b.unique_event_types, 0) AS unique_event_types
+        FROM rfm r
+        LEFT JOIN browsing b ON r.customer_id = b.customer_id
+    """)
 
-    cluster_df = customer_metrics.join(
-        customers_df.select("customer_id", "device_type", "gender"),
-        on="customer_id", how="inner")
-
-    numeric_feature_cols = [
-        "total_spend", "num_transactions", "avg_order_value",
-        "num_sessions", "promo_usage_rate", "payment_methods_used",
-    ]
-    cluster_df = cluster_df.dropna(subset=numeric_feature_cols)
-
-    print(f"\n   Clustering feature dataset: {cluster_df.count():,} customers")
-    cluster_df.describe().show()
-    return cluster_df, numeric_feature_cols
-
-
-def run_clustering(spark):
-    """Perform KMeans clustering for customer segmentation."""
-    print("\n" + "=" * 60)
-    print("  TASK 2: CUSTOMER SEGMENTATION (K-MEANS CLUSTERING)")
-    print("=" * 60)
-
-    cluster_df, numeric_features = build_clustering_features(spark)
+    cluster_df = cluster_df.dropna()
     cluster_df = cluster_df.repartition(2).cache()
-
     num_customers = cluster_df.count()
-    print(f"\n   Clustering dataset: {num_customers:,} customers")
+    print(f"   RFM + behavioral feature dataset: {num_customers:,} customers")
+    print(f"   Features: RFM (6) + browsing (4) = 10 features")
 
-    # Build assembled+scaled DataFrame once (so silhouette eval works)
-    assembler = VectorAssembler(inputCols=numeric_features, outputCol="raw_features")
+    # Feature assembly + scaling
+    feature_cols = [
+        "recency_days", "frequency", "monetary", "avg_order_value",
+        "payment_methods_used", "total_promo_used",
+        "browse_sessions", "avg_browse_time", "products_browsed", "unique_event_types",
+    ]
+    assembler = VectorAssembler(inputCols=feature_cols, outputCol="raw_features",
+                                handleInvalid="keep")
     scaler = StandardScaler(inputCol="raw_features", outputCol="features",
                             withStd=True, withMean=False)
 
@@ -307,15 +461,13 @@ def run_clustering(spark):
     scaled_df.count()
 
     silhouette_eval = ClusteringEvaluator(
-        featuresCol="features", metricName="silhouette",
-        predictionCol="cluster")
+        featuresCol="features", metricName="silhouette", predictionCol="cluster")
 
-    # Test different k values
     k_values = [3, 4, 5, 6, 8]
     best_k, best_score = 4, -1.0
     k_results = []
 
-    print("\n   Evaluating k values ...")
+    print("\n   Evaluating k values (RFM + behavioral)...")
     for k in k_values:
         try:
             km = KMeans(featuresCol="features", predictionCol="cluster",
@@ -330,46 +482,37 @@ def run_clustering(spark):
                 best_k = k
         except Exception as exc:
             print(f"      k={k}  ->  ERROR: {exc}")
-            traceback.print_exc()
 
     print(f"\n   Best k = {best_k} (silhouette = {best_score:.4f})")
 
-    # Final model with best k
-    print(f"   Training final model with k={best_k} ...")
+    # Final model
     km = KMeans(featuresCol="features", predictionCol="cluster",
                 k=best_k, seed=42, maxIter=20)
     km_model = km.fit(scaled_df)
     predictions = km_model.transform(scaled_df)
 
-    # Cluster statistics
+    # Cluster stats
     print("\n" + "-" * 60)
-    print("  CLUSTER SUMMARY")
+    print("  RFM + BEHAVIORAL CLUSTER SUMMARY")
     print("-" * 60)
 
-    clusters_raw = (predictions
-                    .groupBy("cluster")
-                    .agg(
-                        count("*").alias("num_customers"),
-                        spark_round(avg("total_spend"), 2).alias("avg_total_spend"),
-                        spark_round(avg("num_transactions"), 2).alias("avg_transactions"),
-                        spark_round(avg("avg_order_value"), 2).alias("avg_order_value"),
-                        spark_round(avg("num_sessions"), 2).alias("avg_sessions"),
-                        spark_round(avg("promo_usage_rate"), 4).alias("avg_promo_rate"),
-                    )
-                    .orderBy("cluster"))
-    clusters_raw.show(truncate=False)
+    cluster_stats = (predictions
+                     .groupBy("cluster")
+                     .agg(
+                         count("*").alias("num_customers"),
+                         spark_round(avg("recency_days"), 0).alias("avg_recency"),
+                         spark_round(avg("frequency"), 1).alias("avg_frequency"),
+                         spark_round(avg("monetary"), 2).alias("avg_monetary"),
+                         spark_round(avg("avg_order_value"), 2).alias("avg_aov"),
+                         spark_round(avg("browse_sessions"), 1).alias("avg_browse_sessions"),
+                         spark_round(avg("products_browsed"), 1).alias("avg_products_browsed"),
+                     )
+                     .orderBy("cluster"))
+    cluster_stats.show(truncate=False)
 
-    # Device type distribution
-    print("\n   Device Type by Cluster:")
-    predictions.groupBy("cluster", "device_type").count().orderBy("cluster", desc("count")).show(20)
-
-    # Gender distribution
-    print("\n   Gender by Cluster:")
-    predictions.groupBy("cluster", "gender").count().orderBy("cluster", desc("count")).show(20)
-
-    # Save results as plain JSON
-    cluster_stats = [row.asDict() for row in clusters_raw.collect()]
-    for stat in cluster_stats:
+    # Save
+    stats_data = [row.asDict() for row in cluster_stats.collect()]
+    for stat in stats_data:
         for key in stat:
             if hasattr(stat[key], 'item'):
                 stat[key] = float(stat[key])
@@ -378,17 +521,15 @@ def run_clustering(spark):
         "best_k": best_k,
         "best_silhouette": round(best_score, 4),
         "k_evaluation": k_results,
-        "cluster_statistics": cluster_stats,
-    }, os.path.join(ML_OUTPUT_DIR, "clustering_results.json"))
+        "features_used": feature_cols,
+        "cluster_statistics": stats_data,
+    }, os.path.join(ML_OUTPUT_DIR, "rfm_clustering_results.json"))
 
-    # Save cluster assignments as CSV
-    assignments_path = os.path.join(ML_OUTPUT_DIR, "cluster_assignments.csv")
-    assignments = predictions.select(
-        "customer_id", "cluster", "total_spend", "num_transactions",
-        "avg_order_value", "num_sessions", "promo_usage_rate",
-        "device_type", "gender"
-    ).toPandas()
-    assignments.to_csv(assignments_path, index=False)
+    assignments_path = os.path.join(ML_OUTPUT_DIR, "rfm_cluster_assignments.csv")
+    predictions.select(
+        "customer_id", "cluster", "recency_days", "frequency", "monetary",
+        "avg_order_value", "browse_sessions", "products_browsed"
+    ).toPandas().to_csv(assignments_path, index=False)
     print(f"   Saved: {assignments_path}")
 
     scaled_df.unpersist()
@@ -401,29 +542,34 @@ def run_clustering(spark):
 # ===================================================================
 
 def run_ml_pipeline():
-    """Execute both ML tasks."""
+    """Execute all three advanced ML tasks."""
     ensure_dirs()
-    spark = get_spark_session("ECommerce-ML")
+    spark = get_spark_session("ECommerce-AdvancedML")
 
     print("\n" + "=" * 60)
-    print("  RUNNING ML PIPELINE")
+    print("  🤖 RUNNING ADVANCED ML PIPELINE")
     print("=" * 60)
 
-    # Task 1: Classification
+    # Task 1: Classification with clickstream features
     classification_results = run_classification(spark)
 
-    # Task 2: Clustering
-    clustering_results, best_k = run_clustering(spark)
+    # Task 2: ALS Recommender
+    als_results = run_als_recommendations(spark)
+
+    # Task 3: RFM + Behavioral Segmentation
+    clustering_results, best_k = run_rfm_segmentation(spark)
 
     # Final summary
     print("\n" + "=" * 60)
-    print("  ML PIPELINE COMPLETE")
+    print("  🤖 ADVANCED ML PIPELINE COMPLETE")
     print("=" * 60)
     successful = [r for r in classification_results if r.get("F1", 0) > 0]
     if successful:
         best = max(successful, key=lambda x: x["F1"])
         print(f"\n   Best classifier: {best['model']} (F1={best['F1']:.4f}, AUC={best['AUC']:.4f})")
-    print(f"   Customer segments: {best_k}")
+    if als_results:
+        print(f"   ALS Recommender RMSE: {als_results['RMSE']}")
+    print(f"   RFM Customer segments: {best_k}")
     print(f"   Results saved to: {ML_OUTPUT_DIR}\n")
 
     spark.stop()
