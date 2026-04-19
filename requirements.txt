@@ -1,4 +1,4 @@
-pyspark>=3.5.0
+pyspark>=3.3.4
 pandas>=2.0.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
