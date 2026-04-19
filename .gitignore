@@ -32,3 +32,6 @@ venv/
 .idea/
 .vscode/
 *.iml
+
+# Office temp files
+~$*

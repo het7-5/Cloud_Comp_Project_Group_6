@@ -28,7 +28,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_ORG/Cloud_Comp_Project_Group_6.git
+git clone https://github.com/het7-5/Cloud_Comp_Project_Group_6.git
 cd Cloud_Comp_Project_Group_6
 ```
 

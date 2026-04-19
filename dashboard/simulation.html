@@ -1,0 +1,1724 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CcMart — Live E-Commerce Simulation | CcMart Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6fa; --white:#fff; --navy:#141D4A; --blue:#1E5BD4;
+  --lblue:#e8f0fc; --green:#0f9b56; --lgreen:#e5f9ee;
+  --orange:#D46B08; --lorange:#fef3e2; --purple:#6C3FC4;
+  --lpurple:#f0ebff; --red:#c03228; --lred:#fcecea;
+  --teal:#087079; --lteal:#e0f4f5; --amber:#b45309;
+  --t1:#1a1d2e; --t2:#44506A; --t3:#7a84a8;
+  --border:#dde1f0; --card-shadow:0 2px 12px rgba(30,91,212,.07);
+  --font:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
+
+/* ── LAYOUT ──────────────────────────────────────────── */
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ── NAVBAR ─────────────────────────────────────────── */
+.nav{
+  background:var(--navy);color:#fff;
+  display:flex;align-items:center;gap:18px;
+  padding:0 24px;height:58px;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 16px rgba(0,0,0,.25);
+}
+.nav-logo{font-size:22px;font-weight:800;letter-spacing:-.02em;color:#fff;white-space:nowrap}
+.nav-logo span{color:#60A5FA}
+.nav-search{
+  flex:1;max-width:480px;position:relative;margin: 0 auto;
+}
+.nav-search input{
+  width:100%;padding:8px 40px 8px 14px;border-radius:8px;
+  border:none;background:rgba(255,255,255,.12);color:#fff;
+  font-size:13px;font-family:var(--font);outline:none;
+}
+.nav-search input::placeholder{color:rgba(255,255,255,.5)}
+.nav-search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:.6;font-size:14px}
+.nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.nav-badge-btn{
+  position:relative;background:rgba(255,255,255,.1);border:none;
+  color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;
+  font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:6px;
+  transition:background .15s;
+}
+.nav-badge-btn:hover{background:rgba(255,255,255,.2)}
+.cart-count{
+  position:absolute;top:-4px;right:-4px;background:#ef4444;
+  color:#fff;font-size:10px;font-weight:700;width:16px;height:16px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+.user-chip{
+  display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);
+  border-radius:8px;padding:6px 12px;font-size:12px;color:rgba(255,255,255,.9);
+}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--blue);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
+
+/* ── ANALYTICS TOGGLE BAR ────────────────────────────── */
+.analytics-bar{
+  background:linear-gradient(90deg,var(--navy),#1E3A8A);
+  padding:6px 24px;display:flex;align-items:center;gap:14px;
+  font-size:12px;color:rgba(255,255,255,.8);
+}
+.ab-dot{width:7px;height:7px;border-radius:50%;background:#22d3ee;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.ab-label{font-weight:600;color:#fff}
+.ab-stat{background:rgba(255,255,255,.1);border-radius:4px;padding:2px 8px;font-size:11px}
+.ab-toggle{
+  margin-left:auto;background:var(--blue);color:#fff;border:none;
+  padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;
+  cursor:pointer;font-family:var(--font);transition:background .15s;
+}
+.ab-toggle:hover{background:#1a4fc4}
+
+/* ── MAIN BODY ────────────────────────────────────────── */
+.main-body{display:flex;flex:1;min-height:0}
+
+/* ── SIDEBAR ─────────────────────────────────────────── */
+.sidebar{
+  width:220px;flex-shrink:0;background:var(--white);
+  border-right:1px solid var(--border);padding:18px 0;
+  position:sticky;top:58px;height:calc(100vh - 96px);overflow-y:auto;
+}
+.sidebar-section{padding:0 16px;margin-bottom:6px}
+.sidebar-label{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--t3);padding:8px 16px 4px}
+.cat-btn{
+  display:flex;align-items:center;gap:8px;width:100%;padding:8px 16px;
+  border:none;background:transparent;cursor:pointer;font-family:var(--font);
+  font-size:13px;color:var(--t2);border-radius:0;text-align:left;transition:all .15s;
+}
+.cat-btn:hover,.cat-btn.active{background:var(--lblue);color:var(--blue);font-weight:600}
+.cat-btn .cat-icon{font-size:16px;width:22px;text-align:center}
+.cat-sub{padding-left:46px;font-size:12px;color:var(--t3);
+  cursor:pointer;padding-top:5px;padding-bottom:5px;display:block;
+  transition:color .15s;border:none;background:transparent;width:100%;text-align:left;font-family:var(--font);
+}
+.cat-sub:hover,.cat-sub.active{color:var(--blue);font-weight:500}
+
+/* ── STORE CONTENT ───────────────────────────────────── */
+.store-content{flex:1;padding:20px 22px;overflow-y:auto;
+  height:calc(100vh - 96px);position:relative}
+.store-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;
+}
+.store-title{font-size:18px;font-weight:700;color:var(--t1)}
+.store-subtitle{font-size:12px;color:var(--t3);margin-top:2px}
+.sort-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t3)}
+.sort-select{
+  padding:5px 10px;border:1px solid var(--border);border-radius:6px;
+  font-family:var(--font);font-size:12px;color:var(--t2);background:var(--white);cursor:pointer;
+}
+
+/* ── BANNER ─────────────────────────────────────────── */
+.promo-banner{
+  background:linear-gradient(135deg,var(--navy) 0%,#1E3A8A 100%);
+  border-radius:12px;padding:20px 28px;margin-bottom:20px;
+  display:flex;align-items:center;justify-content:space-between;
+  color:#fff;overflow:hidden;position:relative;
+}
+.promo-banner::before{
+  content:'';position:absolute;right:-30px;top:-30px;
+  width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.05);
+}
+.pb-text h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.pb-text p{font-size:12px;color:rgba(255,255,255,.7)}
+.pb-badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700}
+
+/* ── PRODUCT GRID ─────────────────────────────────────── */
+.products-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:14px;
+}
+.product-card{
+  background:var(--white);border:1px solid var(--border);border-radius:12px;
+  cursor:pointer;transition:all .2s;overflow:hidden;position:relative;
+}
+.product-card:hover{
+  box-shadow:0 8px 28px rgba(30,91,212,.14);border-color:#a5b4fc;
+  transform:translateY(-2px);
+}
+.pc-img{
+  height:160px;display:flex;align-items:center;justify-content:center;
+  font-size:52px;position:relative;
+}
+.pc-badge{
+  position:absolute;top:10px;right:10px;
+  font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;
+}
+.badge-new{background:#dcfce7;color:#166534}
+.badge-hot{background:#fef3c7;color:#92400e}
+.badge-sale{background:#fee2e2;color:#991b1b}
+.pc-body{padding:12px}
+.pc-brand{font-size:10px;font-weight:600;color:var(--t3);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.pc-name{font-size:13px;font-weight:600;color:var(--t1);
+  margin-bottom:5px;line-height:1.35}
+.pc-category{
+  display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;
+  font-weight:600;margin-bottom:8px;
+}
+.pc-price-row{display:flex;align-items:center;justify-content:space-between}
+.pc-price{font-size:15px;font-weight:800;color:var(--navy)}
+.pc-orig{font-size:11px;color:var(--t3);text-decoration:line-through;margin-left:5px}
+.pc-rating{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:3px}
+.star{color:#f59e0b}
+.add-btn{
+  width:100%;margin-top:10px;padding:8px;border:1.5px solid var(--blue);
+  border-radius:8px;background:transparent;color:var(--blue);
+  font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);
+  transition:all .18s;
+}
+.add-btn:hover{background:var(--blue);color:#fff}
+.add-btn.added{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* hovered indicator */
+.product-card.hovered-card::after{
+  content:'👁 Viewing';
+  position:absolute;top:10px;left:10px;background:rgba(20,29,74,.85);
+  color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;
+}
+
+/* ── ANALYTICS PANEL ─────────────────────────────────── */
+.analytics-panel{
+  width:360px;flex-shrink:0;background:var(--navy);color:#fff;
+  position:sticky;top:96px;height:calc(100vh - 96px);
+  overflow-y:auto;display:flex;flex-direction:column;
+  border-left:1px solid rgba(255,255,255,.1);
+  transition:width .3s ease;
+}
+.analytics-panel.hidden{width:0;overflow:hidden;border:none}
+.ap-header{
+  padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.08);
+  flex-shrink:0;
+}
+.ap-title{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+.ap-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.spark-dot{width:7px;height:7px;border-radius:50%;background:#22d3ee;flex-shrink:0;animation:pulse 1.5s infinite}
+.ap-section{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.ap-section-title{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:rgba(255,255,255,.45);margin-bottom:8px;
+  display:flex;align-items:center;justify-content:space-between}
+.ap-section-title span{color:rgba(255,255,255,.7);font-weight:400;text-transform:none;letter-spacing:0}
+
+/* risk score */
+.risk-container{display:flex;align-items:center;gap:12px}
+.risk-gauge{flex-shrink:0;width:72px;height:72px;position:relative}
+.risk-gauge svg{width:72px;height:72px}
+.risk-arc-bg{fill:none;stroke:rgba(255,255,255,.1);stroke-width:6;stroke-linecap:round}
+.risk-arc{fill:none;stroke-width:6;stroke-linecap:round;
+  transition:stroke-dasharray 1s ease,stroke .5s}
+.risk-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800}
+.risk-info{flex:1}
+.risk-level{font-size:14px;font-weight:700;margin-bottom:3px}
+.risk-action{font-size:10px;color:rgba(255,255,255,.55);line-height:1.5}
+
+/* event log */
+.event-log{max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.event-log::-webkit-scrollbar{width:3px}
+.event-log::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+.event-item{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  border-radius:6px;padding:6px 9px;font-size:11px;font-family:var(--mono);
+  display:flex;align-items:center;gap:7px;animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.ev-type{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;flex-shrink:0}
+.ev-view{background:rgba(30,91,212,.3);color:#93c5fd}
+.ev-cart{background:rgba(15,155,86,.3);color:#6ee7b7}
+.ev-wish{background:rgba(108,63,196,.3);color:#c4b5fd}
+.ev-buy{background:rgba(239,68,68,.3);color:#fca5a5}
+.ev-text{color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-time{margin-left:auto;color:rgba(255,255,255,.3);font-size:10px;flex-shrink:0}
+
+/* segment indicator */
+.segment-card{
+  border-radius:8px;padding:10px 12px;
+  display:flex;align-items:center;gap:10px;margin-bottom:6px;
+}
+.seg-icon{font-size:22px;flex-shrink:0}
+.seg-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.seg-desc{font-size:10px;color:rgba(255,255,255,.55)}
+.seg-bar{margin-top:6px}
+.seg-bar-label{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:3px;
+  display:flex;justify-content:space-between}
+.seg-bar-track{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.seg-bar-fill{height:100%;border-radius:2px;transition:width 1.2s ease}
+
+/* recommendations */
+.recs-list{display:flex;flex-direction:column;gap:6px}
+.rec-item{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:9px;
+  cursor:pointer;transition:background .15s;
+}
+.rec-item:hover{background:rgba(255,255,255,.09)}
+.rec-emoji{font-size:20px;flex-shrink:0}
+.rec-name{font-size:12px;font-weight:600;color:rgba(255,255,255,.9);line-height:1.3}
+.rec-price{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px}
+.rec-score{margin-left:auto;flex-shrink:0;font-size:10px;background:rgba(30,91,212,.35);
+  color:#93c5fd;border-radius:4px;padding:2px 6px;font-weight:600}
+
+/* market basket alert */
+.basket-alert{
+  background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.05));
+  border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 12px;
+  display:none;
+}
+.basket-alert.show{display:block;animation:slideIn .4s ease}
+.ba-title{font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:4px;
+  display:flex;align-items:center;gap:5px}
+.ba-items{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.ba-item{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.8)}
+.ba-conf{font-size:10px;background:rgba(245,158,11,.25);color:#fde68a;
+  border-radius:3px;padding:1px 5px;margin-left:auto;flex-shrink:0}
+
+/* funnel mini */
+.funnel-mini{display:flex;flex-direction:column;gap:4px}
+.fm-row{display:flex;align-items:center;gap:8px}
+.fm-label{font-size:10px;color:rgba(255,255,255,.5);width:80px;flex-shrink:0}
+.fm-track{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.fm-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding:0 5px;
+  font-size:9px;font-weight:700;color:rgba(255,255,255,.9);transition:width 1s ease}
+.fm-pct{font-size:10px;color:rgba(255,255,255,.5);width:30px;text-align:right;flex-shrink:0}
+.fm-you{font-size:9px;background:#3b82f6;color:#fff;border-radius:3px;padding:1px 4px;margin-left:auto}
+
+/* ── CART MODAL ───────────────────────────────────────── */
+.cart-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;
+  display:none;align-items:flex-start;justify-content:flex-end;
+}
+.cart-overlay.open{display:flex}
+.cart-panel{
+  background:var(--white);width:380px;height:100vh;
+  display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.15);
+  animation:slideRight .25s ease;
+}
+@keyframes slideRight{from{transform:translateX(100%)}to{transform:none}}
+.cart-header{
+  background:var(--navy);color:#fff;padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cart-header h3{font-size:16px;font-weight:700}
+.close-btn{background:none;border:none;color:rgba(255,255,255,.7);
+  font-size:20px;cursor:pointer;padding:2px 6px}
+.cart-items{flex:1;overflow-y:auto;padding:12px}
+.cart-empty{text-align:center;padding:48px 24px;color:var(--t3)}
+.cart-empty .ce-icon{font-size:48px;display:block;margin-bottom:10px}
+.cart-item{
+  display:flex;gap:10px;padding:12px;border:1px solid var(--border);
+  border-radius:10px;margin-bottom:8px;align-items:center;
+}
+.ci-emoji{font-size:30px;flex-shrink:0;width:48px;height:48px;
+  background:var(--bg);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.ci-info{flex:1}
+.ci-name{font-size:13px;font-weight:600;color:var(--t1);line-height:1.3}
+.ci-price{font-size:12px;color:var(--blue);font-weight:700;margin-top:3px}
+.ci-qty{display:flex;align-items:center;gap:8px;margin-top:6px}
+.qty-btn{
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--border);
+  background:transparent;cursor:pointer;font-size:14px;display:flex;
+  align-items:center;justify-content:center;color:var(--t2);
+}
+.qty-btn:hover{background:var(--lblue);color:var(--blue);border-color:var(--blue)}
+.qty-num{font-size:13px;font-weight:600;color:var(--t1);min-width:18px;text-align:center}
+.remove-item{margin-left:auto;color:var(--t3);background:none;border:none;
+  cursor:pointer;font-size:16px;transition:color .15s}
+.remove-item:hover{color:var(--red)}
+.cart-footer{padding:14px 16px;border-top:1px solid var(--border)}
+.cart-total-row{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+}
+.cart-total-label{font-size:13px;color:var(--t2)}
+.cart-total-val{font-size:20px;font-weight:800;color:var(--navy)}
+.checkout-btn{
+  width:100%;padding:13px;background:var(--navy);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:var(--font);transition:background .18s;
+}
+.checkout-btn:hover{background:#0f1a40}
+.checkout-btn:disabled{background:var(--t3);cursor:default}
+
+/* ── PRODUCT MODAL ───────────────────────────────────── */
+.product-modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.product-modal-overlay.open{display:flex}
+.product-modal{
+  background:var(--white);border-radius:16px;max-width:760px;width:100%;
+  max-height:90vh;overflow-y:auto;animation:modalIn .25s ease;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+.pm-img{
+  height:260px;display:flex;align-items:center;justify-content:center;
+  font-size:88px;border-radius:16px 16px 0 0;
+}
+.pm-body{padding:24px}
+.pm-brand{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em}
+.pm-name{font-size:22px;font-weight:800;color:var(--t1);margin:6px 0}
+.pm-price-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.pm-price{font-size:26px;font-weight:800;color:var(--navy)}
+.pm-orig{font-size:16px;color:var(--t3);text-decoration:line-through}
+.pm-discount{font-size:13px;background:#fee2e2;color:var(--red);
+  border-radius:6px;padding:3px 8px;font-weight:700}
+.pm-desc{font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:16px}
+.pm-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.pm-tag{background:var(--bg);border:1px solid var(--border);color:var(--t2);
+  font-size:11px;padding:3px 9px;border-radius:100px;font-weight:500}
+.pm-actions{display:flex;gap:10px}
+.pm-cart-btn{
+  flex:1;padding:13px;background:var(--navy);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+  font-family:var(--font);transition:background .18s;
+}
+.pm-cart-btn:hover{background:#0f1a40}
+.pm-wish-btn{
+  padding:13px 18px;border:1.5px solid var(--border);background:transparent;
+  border-radius:10px;font-size:20px;cursor:pointer;transition:all .18s;
+}
+.pm-wish-btn:hover{border-color:var(--red);background:#fff0f0}
+.pm-close{
+  position:absolute;top:14px;right:14px;background:rgba(0,0,0,.4);
+  color:#fff;border:none;border-radius:50%;width:32px;height:32px;
+  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+}
+.pm-top{position:relative}
+
+/* ── CHECKOUT SIMULATION ─────────────────────────────── */
+.checkout-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.checkout-overlay.open{display:flex}
+.checkout-modal{
+  background:var(--white);border-radius:16px;max-width:640px;width:100%;
+  max-height:90vh;overflow-y:auto;animation:modalIn .25s ease;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.cm-header{background:var(--navy);color:#fff;padding:22px 28px;border-radius:16px 16px 0 0;
+  display:flex;align-items:center;justify-content:space-between}
+.cm-header h3{font-size:18px;font-weight:700}
+.cm-steps{display:flex;gap:4px;margin:0 28px 0;padding:18px 0;
+  border-bottom:1px solid var(--border)}
+.cm-step{flex:1;text-align:center;font-size:11px;color:var(--t3)}
+.cm-step.active{color:var(--blue);font-weight:700}
+.cm-step.done{color:var(--green);font-weight:600}
+.cm-step-num{
+  width:24px;height:24px;border-radius:50%;background:var(--bg);
+  border:2px solid var(--border);margin:0 auto 5px;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
+}
+.cm-step.active .cm-step-num{background:var(--blue);border-color:var(--blue);color:#fff}
+.cm-step.done .cm-step-num{background:var(--green);border-color:var(--green);color:#fff}
+.cm-body{padding:22px 28px}
+.cm-section{margin-bottom:18px}
+.cm-section h4{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:10px}
+.cm-row{display:flex;gap:10px;margin-bottom:8px}
+.cm-input{
+  flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:var(--font);font-size:13px;color:var(--t1);outline:none;
+  transition:border-color .15s;
+}
+.cm-input:focus{border-color:var(--blue)}
+.pay-method{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;
+}
+.pay-opt{
+  border:1.5px solid var(--border);border-radius:8px;padding:8px 14px;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:6px;
+}
+.pay-opt:hover,.pay-opt.selected{border-color:var(--blue);background:var(--lblue);color:var(--blue)}
+.cm-footer{padding:16px 28px 24px;border-top:1px solid var(--border)}
+.cm-btn{
+  width:100%;padding:14px;background:var(--navy);color:#fff;
+  border:none;border-radius:10px;font-size:16px;font-weight:700;
+  cursor:pointer;font-family:var(--font);transition:all .2s;margin-bottom:8px;
+}
+.cm-btn:hover{background:#0f1a40;transform:translateY(-1px)}
+
+/* Success screen */
+.success-screen{text-align:center;padding:40px 28px}
+.success-icon{font-size:64px;display:block;margin-bottom:14px;animation:pop .4s ease}
+@keyframes pop{from{transform:scale(.5)}to{transform:scale(1)}}
+.success-title{font-size:22px;font-weight:800;color:var(--green);margin-bottom:8px}
+.success-sub{font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:22px}
+.pipeline-events{
+  background:var(--bg);border-radius:10px;padding:14px;text-align:left;
+  font-family:var(--mono);font-size:11px;color:var(--t2);margin-bottom:20px;
+}
+.pe-line{margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.pe-tag{border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700}
+.pe-spark{background:#e0e7ff;color:#3730a3}
+.pe-ml{background:#d1fae5;color:#065f46}
+.pe-sql{background:#fef3c7;color:#92400e}
+
+/* ── TOAST ───────────────────────────────────────────── */
+.toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{
+  background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;
+  font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.3);
+  animation:toastIn .3s ease;display:flex;align-items:center;gap:8px;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.toast.removing{animation:toastOut .3s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translateY(-8px)}}
+
+/* ── PROMO POPUP ─────────────────────────────────────── */
+.promo-popup{
+  position:fixed;bottom:28px;right:24px;background:var(--white);
+  border:1px solid var(--border);border-radius:14px;width:300px;
+  box-shadow:0 8px 32px rgba(20,29,74,.18);z-index:450;
+  animation:slidePopup .4s ease;display:none;overflow:hidden;
+}
+.promo-popup.show{display:block}
+@keyframes slidePopup{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+.pp-header{background:linear-gradient(135deg,#D46B08,#f59e0b);
+  padding:12px 16px;display:flex;align-items:center;gap:8px}
+.pp-header h4{color:#fff;font-size:13px;font-weight:700}
+.pp-body{padding:14px 16px}
+.pp-text{font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px}
+.pp-code{
+  background:var(--bg);border:1px dashed var(--orange);border-radius:8px;
+  padding:8px 12px;font-family:var(--mono);font-size:14px;font-weight:700;
+  color:var(--orange);text-align:center;letter-spacing:.06em;margin-bottom:10px;
+}
+.pp-btns{display:flex;gap:7px}
+.pp-use{flex:1;padding:8px;background:var(--orange);color:#fff;border:none;
+  border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.pp-dismiss{padding:8px 12px;background:var(--bg);color:var(--t3);border:1px solid var(--border);
+  border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--font)}
+
+/* ── RISK POPUP (ML alert) ───────────────────────────── */
+.ml-alert{
+  position:fixed;top:110px;right:380px;
+  background:var(--white);border:1px solid var(--border);border-radius:12px;
+  width:280px;box-shadow:0 8px 32px rgba(0,0,0,.12);
+  z-index:450;display:none;overflow:hidden;animation:slideIn .3s ease;
+}
+.ml-alert.show{display:block}
+.mla-head{background:var(--navy);padding:10px 14px;
+  display:flex;align-items:center;gap:8px}
+.mla-head span{font-size:12px;font-weight:600;color:#fff}
+.mla-body{padding:12px 14px;font-size:12px;color:var(--t2);line-height:1.6}
+.mla-close{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.6);
+  cursor:pointer;font-size:14px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(100,116,139,.3);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- ── NAVBAR ── -->
+<nav class="nav">
+  <div class="nav-logo">Nusa<span>Mart</span></div>
+  <div class="nav-search">
+    <input type="text" placeholder="Search products, brands, categories…" id="searchInput" oninput="handleSearch(this.value)"/>
+    <span class="nav-search-icon">🔍</span>
+  </div>
+  <div class="nav-right">
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">RS</div>
+      <div>
+        <div style="font-weight:600;font-size:12px" id="userName">Rina Sari</div>
+        <div style="font-size:10px;opacity:.6" id="userSegment">Casual Shopper</div>
+      </div>
+    </div>
+    <button class="nav-badge-btn" onclick="openCart()">
+      🛒 Cart
+      <span class="cart-count" id="cartCount">0</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── ANALYTICS BAR ── -->
+<div class="analytics-bar">
+  <div class="ab-dot"></div>
+  <span class="ab-label">Spark Pipeline Active</span>
+  <span class="ab-stat">⚡ 120ms latency</span>
+  <span class="ab-stat" id="abEvents">Events: 0</span>
+  <span class="ab-stat" id="abSession">Session: <span id="sessionRisk">Scoring…</span></span>
+  <span class="ab-stat">Active Sessions: 1,327</span>
+  <button class="ab-toggle" id="panelToggle" onclick="togglePanel()">Hide Analytics ▶</button>
+</div>
+
+<!-- ── MAIN BODY ── -->
+<div class="main-body">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Categories</div>
+    <button class="cat-btn active" onclick="filterCat('all',this)">
+      <span class="cat-icon">🏪</span> All Products
+    </button>
+    <button class="cat-btn" onclick="filterCat('Apparel',this)">
+      <span class="cat-icon">👗</span> Apparel
+    </button>
+    <button class="cat-sub" onclick="filterSub('Topwear',event)">Topwear</button>
+    <button class="cat-sub" onclick="filterSub('Bottomwear',event)">Bottomwear</button>
+    <button class="cat-sub" onclick="filterSub('Dress',event)">Dresses</button>
+    <button class="cat-sub" onclick="filterSub('Sportswear',event)">Sportswear</button>
+    <button class="cat-btn" onclick="filterCat('Footwear',this)">
+      <span class="cat-icon">👟</span> Footwear
+    </button>
+    <button class="cat-sub" onclick="filterSub('Sports Shoes',event)">Sports Shoes</button>
+    <button class="cat-sub" onclick="filterSub('Casual Shoes',event)">Casual Shoes</button>
+    <button class="cat-sub" onclick="filterSub('Formal Shoes',event)">Formal Shoes</button>
+    <button class="cat-sub" onclick="filterSub('Heels',event)">Heels</button>
+    <button class="cat-btn" onclick="filterCat('Accessories',this)">
+      <span class="cat-icon">👜</span> Accessories
+    </button>
+    <button class="cat-sub" onclick="filterSub('Bags',event)">Bags</button>
+    <button class="cat-sub" onclick="filterSub('Watches',event)">Watches</button>
+    <button class="cat-sub" onclick="filterSub('Eyewear',event)">Eyewear</button>
+    <button class="cat-sub" onclick="filterSub('Perfume',event)">Perfumes</button>
+    <div class="sidebar-label" style="margin-top:10px">Spark Concepts Used</div>
+    <div style="padding:0 14px">
+      <div style="font-size:10px;color:var(--t3);line-height:1.85;padding:4px 0">
+        <div style="margin-bottom:2px">⚡ <b>Structured Streaming</b><br>&nbsp;&nbsp;events logged in real-time</div>
+        <div style="margin-bottom:2px">🤖 <b>ML Conversion Score</b><br>&nbsp;&nbsp;Random Forest per session</div>
+        <div style="margin-bottom:2px">👥 <b>KMeans Segmentation</b><br>&nbsp;&nbsp;your cluster auto-updates</div>
+        <div style="margin-bottom:2px">✨ <b>ALS Recommendations</b><br>&nbsp;&nbsp;personalised to your browse</div>
+        <div>🛒 <b>Market Basket SQL</b><br>&nbsp;&nbsp;co-purchase lift alerts</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Store Content -->
+  <div class="store-content" id="storeContent">
+    <!-- Promo banner -->
+    <div class="promo-banner">
+      <div class="pb-text">
+        <h3>🎉 Weekend Sale — Up to 40% Off</h3>
+        <p>Personalised picks selected by our AI recommender just for you</p>
+      </div>
+      <div class="pb-badge">Use Code: <b>WEEKENDSERU</b></div>
+    </div>
+
+    <div class="store-header">
+      <div>
+        <div class="store-title" id="storeTitle">All Products</div>
+        <div class="store-subtitle" id="storeSubtitle">44,000+ products · Sorted by AI Relevance</div>
+      </div>
+      <div class="sort-bar">
+        Sort: <select class="sort-select" onchange="handleSort(this.value)">
+          <option value="relevance">AI Relevance</option>
+          <option value="price_asc">Price: Low → High</option>
+          <option value="price_desc">Price: High → Low</option>
+          <option value="rating">Top Rated</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="products-grid" id="productsGrid"></div>
+  </div>
+
+  <!-- Analytics Panel -->
+  <aside class="analytics-panel" id="analyticsPanel">
+    <div class="ap-header">
+      <div class="ap-title">
+        <div class="spark-dot"></div>
+        CcMart Analytics Pipeline
+      </div>
+      <div class="ap-sub">Spark Structured Streaming · MLlib · SQL · Watching your session</div>
+    </div>
+
+    <!-- Risk Score -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        ML CONVERSION SCORE <span>Random Forest</span>
+      </div>
+      <div class="risk-container">
+        <div class="risk-gauge">
+          <svg viewBox="0 0 72 72">
+            <circle class="risk-arc-bg" cx="36" cy="36" r="28" stroke-dasharray="176" stroke-dashoffset="44"/>
+            <circle class="risk-arc" id="riskArc" cx="36" cy="36" r="28"
+              stroke="#22d3ee" stroke-dasharray="0 176" stroke-dashoffset="44"/>
+          </svg>
+          <div class="risk-pct" id="riskPct">0%</div>
+        </div>
+        <div class="risk-info">
+          <div class="risk-level" id="riskLevel" style="color:#22d3ee">Scoring…</div>
+          <div class="risk-action" id="riskAction">Waiting for browsing activity</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        SPARK STREAMING EVENTS <span id="evCount">0 events</span>
+      </div>
+      <div class="event-log" id="eventLog">
+        <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:16px 0">
+          Start browsing to see events stream in…
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Segment -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        KMEANS SEGMENT <span>k=5 · Silhouette 0.629</span>
+      </div>
+      <div class="segment-card" id="segmentCard" style="background:rgba(255,255,255,.05)">
+        <div class="seg-icon">🛍️</div>
+        <div>
+          <div class="seg-name" id="segName">Detecting…</div>
+          <div class="seg-desc" id="segDesc">Browse more to assign segment</div>
+        </div>
+      </div>
+      <div class="seg-bar">
+        <div class="seg-bar-label">
+          <span>Segment match confidence</span>
+          <span id="segConf">—</span>
+        </div>
+        <div class="seg-bar-track">
+          <div class="seg-bar-fill" id="segBarFill" style="width:0;background:var(--blue)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALS Recommendations -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        ALS RECOMMENDATIONS <span>RMSE 0.8243</span>
+      </div>
+      <div class="recs-list" id="recsList">
+        <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:10px 0">
+          View products to get personalised picks…
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Basket -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        MARKET BASKET ALERT <span>SQL · LATERAL VIEW EXPLODE</span>
+      </div>
+      <div class="basket-alert" id="basketAlert">
+        <div class="ba-title">🛒 Complete the Look</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.55);margin-bottom:6px" id="basketConf"></div>
+        <div class="ba-items" id="basketItems"></div>
+      </div>
+      <div id="basketEmpty" style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:10px 0">
+        Add items to cart to trigger basket analysis…
+      </div>
+    </div>
+
+    <!-- Funnel -->
+    <div class="ap-section">
+      <div class="ap-section-title">
+        CONVERSION FUNNEL <span>Your position</span>
+      </div>
+      <div class="funnel-mini">
+        <div class="fm-row">
+          <div class="fm-label">Homepage</div>
+          <div class="fm-track"><div class="fm-fill" style="width:100%;background:#6366f1">895K sessions</div></div>
+          <span class="fm-pct">100%</span>
+        </div>
+        <div class="fm-row">
+          <div class="fm-label">Product View</div>
+          <div class="fm-track"><div class="fm-fill" style="width:72%;background:#8b5cf6">644K</div></div>
+          <span class="fm-pct">72%</span>
+        </div>
+        <div class="fm-row" id="funnelCartRow">
+          <div class="fm-label">Add to Cart</div>
+          <div class="fm-track"><div class="fm-fill" style="width:48%;background:#06b6d4">429K</div></div>
+          <span class="fm-pct">48%</span>
+        </div>
+        <div class="fm-row">
+          <div class="fm-label">Checkout</div>
+          <div class="fm-track"><div class="fm-fill" style="width:28%;background:#f59e0b">250K</div></div>
+          <span class="fm-pct">28%</span>
+        </div>
+        <div class="fm-row">
+          <div class="fm-label">Purchase ✅</div>
+          <div class="fm-track"><div class="fm-fill" style="width:14%;background:#10b981">125K</div></div>
+          <span class="fm-pct">14%</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.4);text-align:right" id="funnelYou">
+        📍 You are at: <b style="color:#60a5fa">Homepage</b>
+      </div>
+    </div>
+  </aside>
+</div>
+</div><!-- /app -->
+
+<!-- ── CART OVERLAY ── -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart(event)">
+  <div class="cart-panel" id="cartPanel">
+    <div class="cart-header">
+      <h3>🛒 Your Cart</h3>
+      <button class="close-btn" onclick="closeCart()">✕</button>
+    </div>
+    <div class="cart-items" id="cartItemsContainer">
+      <div class="cart-empty">
+        <span class="ce-icon">🛒</span>
+        <div style="font-weight:600;color:var(--t2)">Your cart is empty</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:6px">Browse products and add them here</div>
+      </div>
+    </div>
+    <div class="cart-footer" id="cartFooter" style="display:none">
+      <div class="cart-total-row">
+        <span class="cart-total-label">Total</span>
+        <span class="cart-total-val" id="cartTotal">IDR 0</span>
+      </div>
+      <button class="checkout-btn" onclick="openCheckout()">Proceed to Checkout →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRODUCT MODAL ── -->
+<div class="product-modal-overlay" id="productModal" onclick="closeProductModal(event)">
+  <div class="product-modal" id="productModalContent">
+    <div class="pm-top">
+      <div class="pm-img" id="pmImg"></div>
+      <button class="pm-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="pm-body">
+      <div class="pm-brand" id="pmBrand"></div>
+      <div class="pm-name" id="pmName"></div>
+      <div class="pm-price-row">
+        <span class="pm-price" id="pmPrice"></span>
+        <span class="pm-orig" id="pmOrig"></span>
+        <span class="pm-discount" id="pmDisc"></span>
+      </div>
+      <div class="pm-desc" id="pmDesc"></div>
+      <div class="pm-tags" id="pmTags"></div>
+      <div class="pm-actions">
+        <button class="pm-cart-btn" id="pmCartBtn">🛒 Add to Cart</button>
+        <button class="pm-wish-btn" id="pmWishBtn" title="Add to Wishlist">♡</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHECKOUT MODAL ── -->
+<div class="checkout-overlay" id="checkoutOverlay" onclick="closeCheckout(event)">
+  <div class="checkout-modal" id="checkoutModal">
+    <div class="cm-header">
+      <h3>Secure Checkout</h3>
+      <button class="close-btn" onclick="closeCheckout()">✕</button>
+    </div>
+    <div id="checkoutContent"></div>
+  </div>
+</div>
+
+<!-- ── PROMO POPUP ── -->
+<div class="promo-popup" id="promoPopup">
+  <div class="pp-header">
+    <span style="font-size:20px">🎁</span>
+    <h4>Special Offer — Just For You!</h4>
+  </div>
+  <div class="pp-body">
+    <div class="pp-text" id="promoText">Our AI detected you're considering a purchase. Here's a 10% discount!</div>
+    <div class="pp-code" id="promoCode">BUYMORE10</div>
+    <div class="pp-btns">
+      <button class="pp-use" onclick="usePromo()">Apply Discount</button>
+      <button class="pp-dismiss" onclick="dismissPromo()">No thanks</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ML ALERT POPUP ── -->
+<div class="ml-alert" id="mlAlert">
+  <div class="mla-head">
+    <span>🤖 Spark ML — Session Alert</span>
+    <button class="mla-close" onclick="document.getElementById('mlAlert').classList.remove('show')">✕</button>
+  </div>
+  <div class="mla-body" id="mlAlertBody">ML detected high conversion intent.</div>
+</div>
+
+<!-- ── TOAST CONTAINER ── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// PRODUCT DATA (based on CcMart dataset categories)
+// ═══════════════════════════════════════════════════
+const PRODUCTS = [
+  // Apparel - Topwear
+  {id:1,brand:"Adidas",name:"Classic Polo Shirt",sub:"Topwear",cat:"Apparel",emoji:"👕",
+   price:213000,orig:299000,rating:4.5,color:"#dbeafe",desc:"Premium cotton polo with breathable fabric. Perfect for casual and semi-formal occasions. Available in multiple colours.",
+   tags:["Cotton","Breathable","Unisex","M-XXL"],badge:"hot"},
+  {id:2,brand:"H&M",name:"Slim Fit T-Shirt",sub:"Topwear",cat:"Apparel",emoji:"👚",
+   price:149000,orig:199000,rating:4.2,color:"#f0fdf4",desc:"Modern slim-fit tee made from 100% organic cotton. Lightweight and comfortable for everyday wear.",
+   tags:["Organic Cotton","Slim Fit","S-XL"],badge:"new"},
+  {id:3,brand:"Zara",name:"Formal Button Shirt",sub:"Topwear",cat:"Apparel",emoji:"👔",
+   price:389000,orig:499000,rating:4.6,color:"#f5f3ff",desc:"Crisp formal button-down shirt. Wrinkle-resistant fabric keeps you sharp all day.",
+   tags:["Office Wear","Wrinkle-Free","M-XL"],badge:null},
+
+  // Apparel - Bottomwear
+  {id:4,brand:"Levi's",name:"Slim Jeans 511",sub:"Bottomwear",cat:"Apparel",emoji:"👖",
+   price:549000,orig:699000,rating:4.7,color:"#eff6ff",desc:"Classic slim-fit denim jeans. Stretch fabric for all-day comfort. A wardrobe essential.",
+   tags:["Stretch Denim","Slim Fit","28-36"],badge:"hot"},
+  {id:5,brand:"Uniqlo",name:"Chino Trousers",sub:"Bottomwear",cat:"Apparel",emoji:"🩳",
+   price:299000,orig:399000,rating:4.3,color:"#fef9c3",desc:"Smart casual chinos with a comfortable fit. Ideal for office or weekend outings.",
+   tags:["Smart Casual","Relaxed Fit","28-34"],badge:null},
+
+  // Apparel - Dress
+  {id:6,brand:"H&M",name:"Floral Midi Dress",sub:"Dress",cat:"Apparel",emoji:"👗",
+   price:309000,orig:449000,rating:4.8,color:"#fdf2f8",desc:"Beautiful floral print midi dress perfect for any occasion. Soft, flowing fabric with hidden pockets.",
+   tags:["Floral","Midi Length","XS-XL","Pockets"],badge:"hot"},
+  {id:7,brand:"Zara",name:"Evening Wrap Dress",sub:"Dress",cat:"Apparel",emoji:"💃",
+   price:459000,orig:599000,rating:4.5,color:"#f5f3ff",desc:"Elegant wrap-style dress for evening events. Adjustable tie waist with a graceful silhouette.",
+   tags:["Evening","Wrap Style","XS-L"],badge:null},
+
+  // Apparel - Sportswear
+  {id:8,brand:"Nike",name:"Dri-FIT Training Top",sub:"Sportswear",cat:"Apparel",emoji:"🏃",
+   price:349000,orig:449000,rating:4.6,color:"#ecfdf5",desc:"High-performance training top with Nike Dri-FIT technology. Keeps you dry and comfortable during intense workouts.",
+   tags:["Dri-FIT","Gym","S-XXL","UV Protection"],badge:"new"},
+  {id:9,brand:"Adidas",name:"Sportswear Set",sub:"Sportswear",cat:"Apparel",emoji:"🎽",
+   price:599000,orig:799000,rating:4.4,color:"#eff6ff",desc:"Complete matching sportswear set — top + leggings. Moisture-wicking fabric for optimal performance.",
+   tags:["Set","Yoga","Running","XS-XL"],badge:"sale"},
+
+  // Footwear - Sports
+  {id:10,brand:"Nike",name:"Air Max Running Shoes",sub:"Sports Shoes",cat:"Footwear",emoji:"👟",
+   price:1299000,orig:1699000,rating:4.9,color:"#ecfdf5",desc:"Iconic Air Max cushioning for long-distance running. Breathable mesh upper with responsive foam midsole.",
+   tags:["Running","Air Cushion","37-44","Unisex"],badge:"hot"},
+  {id:11,brand:"Adidas",name:"Ultraboost Training",sub:"Sports Shoes",cat:"Footwear",emoji:"🏋️",
+   price:1599000,orig:2199000,rating:4.8,color:"#eff6ff",desc:"Boost energy return technology for maximum comfort. Perfect for gym training and running.",
+   tags:["Boost Tech","Gym","Training","38-45"],badge:"sale"},
+  {id:12,brand:"Puma",name:"Rush Running Lite",sub:"Sports Shoes",cat:"Footwear",emoji:"🏃",
+   price:549000,orig:749000,rating:4.3,color:"#f0fdf4",desc:"Lightweight running shoes built for speed. Breathable upper with durable outsole for road running.",
+   tags:["Lightweight","Road Running","36-43"],badge:"new"},
+
+  // Footwear - Casual
+  {id:13,brand:"Vans",name:"Old Skool Classic",sub:"Casual Shoes",cat:"Footwear",emoji:"👟",
+   price:749000,orig:899000,rating:4.7,color:"#fef3c7",desc:"The iconic Vans Old Skool with signature side stripe. Canvas and suede upper for everyday wear.",
+   tags:["Casual","Street Style","36-44","Unisex"],badge:null},
+  {id:14,brand:"Converse",name:"Chuck Taylor All Star",sub:"Casual Shoes",cat:"Footwear",emoji:"👞",
+   price:699000,orig:849000,rating:4.6,color:"#fff7ed",desc:"The original canvas sneaker. A timeless classic that goes with everything.",
+   tags:["Canvas","Classic","36-45","Unisex"],badge:"hot"},
+
+  // Footwear - Formal
+  {id:15,brand:"Clarks",name:"Oxford Formal Shoes",sub:"Formal Shoes",cat:"Footwear",emoji:"👞",
+   price:1099000,orig:1399000,rating:4.5,color:"#f8fafc",desc:"Premium leather oxford shoes for formal occasions. Genuine leather upper with cushioned insole.",
+   tags:["Genuine Leather","Office","39-44"],badge:null},
+
+  // Footwear - Heels
+  {id:16,brand:"Steve Madden",name:"Block Heel Pumps",sub:"Heels",cat:"Footwear",emoji:"👠",
+   price:499000,orig:699000,rating:4.4,color:"#fdf2f8",desc:"Elegant block heel pumps suitable for office and evening events. Comfortable padded insole.",
+   tags:["Block Heel","Office","Evening","36-41"],badge:"sale"},
+
+  // Accessories - Bags
+  {id:17,brand:"Zara",name:"Mini Crossbody Bag",sub:"Bags",cat:"Accessories",emoji:"👜",
+   price:328000,orig:449000,rating:4.6,color:"#fdf2f8",desc:"Trendy mini crossbody bag with adjustable strap. PU leather with gold-tone hardware.",
+   tags:["PU Leather","Crossbody","Mini"],badge:"hot"},
+  {id:18,brand:"Puma",name:"Sports Backpack",sub:"Bags",cat:"Accessories",emoji:"🎒",
+   price:349000,orig:499000,rating:4.5,color:"#f0fdf4",desc:"Spacious sports backpack with laptop compartment. Water-resistant material with multiple pockets.",
+   tags:["15\" Laptop","Water Resistant","28L"],badge:null},
+  {id:19,brand:"H&M",name:"Canvas Tote Bag",sub:"Bags",cat:"Accessories",emoji:"🛍️",
+   price:149000,orig:199000,rating:4.2,color:"#fef9c3",desc:"Eco-friendly canvas tote — durable and roomy. Perfect for daily use, shopping, or gym.",
+   tags:["Eco Friendly","Canvas","Large"],badge:"new"},
+
+  // Accessories - Watches
+  {id:20,brand:"Casio",name:"Classic Digital Watch",sub:"Watches",cat:"Accessories",emoji:"⌚",
+   price:449000,orig:599000,rating:4.5,color:"#eff6ff",desc:"Durable Casio digital watch with backlight and stopwatch. Water-resistant to 100m.",
+   tags:["100m Water Resist","Digital","Unisex"],badge:null},
+  {id:21,brand:"Apple",name:"Smart Watch Series",sub:"Watches",cat:"Accessories",emoji:"⌚",
+   price:3299000,orig:3999000,rating:4.9,color:"#f5f3ff",desc:"Advanced smartwatch with health monitoring, GPS, and seamless phone integration. OLED display.",
+   tags:["GPS","Heart Rate","OLED","iOS/Android"],badge:"hot"},
+
+  // Accessories - Eyewear
+  {id:22,brand:"Ray-Ban",name:"UV400 Sunglasses",sub:"Eyewear",cat:"Accessories",emoji:"🕶️",
+   price:799000,orig:999000,rating:4.7,color:"#fef9c3",desc:"Classic aviator sunglasses with UV400 protection. Lightweight metal frame with anti-glare lenses.",
+   tags:["UV400","Aviator","Unisex","Polarised"],badge:null},
+  {id:23,brand:"Oakley",name:"Sports Eyewear",sub:"Eyewear",cat:"Accessories",emoji:"🥽",
+   price:949000,orig:1299000,rating:4.6,color:"#ecfdf5",desc:"High-performance sports eyewear with impact-resistant lenses. Perfect for cycling, running, and outdoor sports.",
+   tags:["Sports","Impact Resistant","Wrap Around"],badge:"new"},
+
+  // Accessories - Perfume
+  {id:24,brand:"Zara",name:"Nuit Eau de Parfum",sub:"Perfume",cat:"Accessories",emoji:"🌸",
+   price:349000,orig:449000,rating:4.4,color:"#fdf2f8",desc:"Sophisticated floral-musky fragrance with notes of jasmine, cedar, and white musk. Long-lasting 8-10 hours.",
+   tags:["EDP","100ml","Floral","Unisex"],badge:null},
+];
+
+// Market basket rules (from SQL analysis)
+const BASKET_RULES = [
+  {trigger:"Topwear",rec:"Footwear",conf:"68%",lift:"2.3x",items:["👟 Sports Shoes","👞 Casual Shoes"]},
+  {trigger:"Dress",rec:"Footwear",conf:"61%",lift:"1.9x",items:["👠 Block Heel Pumps","👜 Crossbody Bag"]},
+  {trigger:"Sports Shoes",rec:"Sportswear",conf:"49%",lift:"1.5x",items:["🎽 Sportswear Set","🏃 Training Top"]},
+  {trigger:"Bags",rec:"Apparel",conf:"55%",lift:"1.7x",items:["👗 Floral Dress","👔 Formal Shirt"]},
+  {trigger:"Watches",rec:"Accessories",conf:"52%",lift:"1.6x",items:["🕶️ UV400 Sunglasses","👜 Crossbody Bag"]},
+];
+
+// ALS recommendation pools by viewed category
+const ALS_RECS = {
+  Apparel: [
+    {emoji:"👗",name:"Summer Floral Dress",price:"IDR 289,000",score:"94%"},
+    {emoji:"👕",name:"Oversized Cotton Tee",price:"IDR 179,000",score:"91%"},
+    {emoji:"👚",name:"Striped Knit Top",price:"IDR 249,000",score:"88%"},
+    {emoji:"🧥",name:"Light Denim Jacket",price:"IDR 499,000",score:"85%"},
+  ],
+  Footwear: [
+    {emoji:"👟",name:"Mesh Running Sneakers",price:"IDR 749,000",score:"96%"},
+    {emoji:"👞",name:"Leather Loafers",price:"IDR 649,000",score:"90%"},
+    {emoji:"🩴",name:"Comfort Sandals",price:"IDR 199,000",score:"86%"},
+    {emoji:"👠",name:"Kitten Heel Mules",price:"IDR 399,000",score:"83%"},
+  ],
+  Accessories: [
+    {emoji:"⌚",name:"Minimalist Quartz Watch",price:"IDR 549,000",score:"95%"},
+    {emoji:"🕶️",name:"Round Retro Glasses",price:"IDR 299,000",score:"89%"},
+    {emoji:"👜",name:"Structured Handbag",price:"IDR 449,000",score:"87%"},
+    {emoji:"💍",name:"Gold Layered Necklace",price:"IDR 189,000",score:"82%"},
+  ],
+  default: [
+    {emoji:"🌸",name:"Floral Perfume Set",price:"IDR 349,000",score:"91%"},
+    {emoji:"🎒",name:"Sports Weekend Bag",price:"IDR 399,000",score:"88%"},
+    {emoji:"👟",name:"All-Day Comfort Shoes",price:"IDR 599,000",score:"85%"},
+    {emoji:"👗",name:"Everyday Casual Dress",price:"IDR 259,000",score:"82%"},
+  ]
+};
+
+// Segment rules
+const SEGMENTS = {
+  low:   {name:"Casual Shopper",   desc:"Cluster 0 · 62.5% of base · Avg ₹2.59M spend",   icon:"🛍️", color:"#6366f1", fill:"#818cf8"},
+  mid:   {name:"Regular Customer", desc:"Cluster 3 · 24.3% of base · Avg ₹18.4M spend",    icon:"🛒", color:"#10b981", fill:"#34d399"},
+  high:  {name:"Power Buyer ⭐",   desc:"Cluster 2 · 3.6% of base · Avg ₹71.2M spend!!",   icon:"💎", color:"#f59e0b", fill:"#fbbf24"},
+  vip:   {name:"Big-Ticket Buyer", desc:"Cluster 4 · 4.5% of base · Premium spend pattern", icon:"👑", color:"#ec4899", fill:"#f472b6"},
+  budget:{name:"Budget Shopper",   desc:"Cluster 1 · 5.1% of base · Value-focused",         icon:"💰", color:"#06b6d4", fill:"#67e8f9"},
+};
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let state = {
+  cart: [],
+  events: [],
+  eventCount: 0,
+  totalEvents: 0,
+  viewedCats: {},
+  browseScore: 0,
+  riskScore: 0,
+  currentProduct: null,
+  panelVisible: true,
+  searchQuery: '',
+  filterCat: 'all',
+  filterSub: '',
+  promoShown: false,
+  promoApplied: false,
+  sortMode: 'relevance',
+  currentUser: {name:'Rina Sari', initials:'RS'},
+  checkoutStep: 1,
+  selectedPayment: 'credit',
+};
+
+// ═══════════════════════════════════════════════════
+// RENDER PRODUCTS
+// ═══════════════════════════════════════════════════
+function getFilteredProducts() {
+  let prods = [...PRODUCTS];
+
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    prods = prods.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      p.cat.toLowerCase().includes(q) ||
+      p.sub.toLowerCase().includes(q)
+    );
+  }
+  if (state.filterCat !== 'all') prods = prods.filter(p => p.cat === state.filterCat);
+  if (state.filterSub) prods = prods.filter(p => p.sub === state.filterSub);
+
+  if (state.sortMode === 'price_asc') prods.sort((a,b)=>a.price-b.price);
+  else if (state.sortMode === 'price_desc') prods.sort((a,b)=>b.price-a.price);
+  else if (state.sortMode === 'rating') prods.sort((a,b)=>b.rating-a.rating);
+  else {
+    // AI relevance: boost recently viewed categories
+    prods.sort((a,b) => {
+      const sa = (state.viewedCats[a.cat]||0) + (state.viewedCats[a.sub]||0);
+      const sb = (state.viewedCats[b.cat]||0) + (state.viewedCats[b.sub]||0);
+      return (sb - sa) || (b.rating - a.rating);
+    });
+  }
+  return prods;
+}
+
+function catColor(cat) {
+  return {Apparel:"#dbeafe",Footwear:"#d1fae5",Accessories:"#fdf4ff"}[cat]||"#f3f4f6";
+}
+function catTextColor(cat) {
+  return {Apparel:"#1d4ed8",Footwear:"#065f46",Accessories:"#7e22ce"}[cat]||"#374151";
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  const prods = getFilteredProducts();
+  document.getElementById('storeTitle').textContent =
+    state.filterSub || (state.filterCat === 'all' ? 'All Products' : state.filterCat);
+  document.getElementById('storeSubtitle').textContent =
+    `${prods.length} products · ${state.sortMode === 'relevance' ? 'Sorted by AI Relevance' : 'Sorted'}`;
+
+  grid.innerHTML = prods.map(p => {
+    const disc = Math.round((1 - p.price/p.orig)*100);
+    const inCart = state.cart.some(c=>c.id===p.id);
+    return `
+    <div class="product-card" id="pc-${p.id}"
+         onclick="openProductModal(${p.id})"
+         onmouseenter="handleHover(${p.id})"
+         onmouseleave="handleHoverEnd(${p.id})">
+      <div class="pc-img" style="background:${p.color}">
+        ${p.emoji}
+        ${p.badge ? `<div class="pc-badge badge-${p.badge}">${p.badge.toUpperCase()}</div>` : ''}
+      </div>
+      <div class="pc-body">
+        <div class="pc-brand">${p.brand}</div>
+        <div class="pc-name">${p.name}</div>
+        <div class="pc-category" style="background:${catColor(p.cat)};color:${catTextColor(p.cat)}">${p.cat} · ${p.sub}</div>
+        <div class="pc-price-row">
+          <div>
+            <span class="pc-price">IDR ${p.price.toLocaleString()}</span>
+            ${disc>0?`<span class="pc-orig">IDR ${p.orig.toLocaleString()}</span>`:''}
+          </div>
+          <div class="pc-rating"><span class="star">★</span>${p.rating}</div>
+        </div>
+        <button class="add-btn ${inCart?'added':''}"
+          onclick="event.stopPropagation();addToCart(${p.id})">
+          ${inCart ? '✓ In Cart' : '+ Add to Cart'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// HOVER (view_product event)
+// ═══════════════════════════════════════════════════
+function handleHover(id) {
+  const p = PRODUCTS.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById(`pc-${id}`)?.classList.add('hovered-card');
+  logEvent('view_product', p.name, 'ev-view');
+}
+function handleHoverEnd(id) {
+  document.getElementById(`pc-${id}`)?.classList.remove('hovered-card');
+}
+
+// ═══════════════════════════════════════════════════
+// PRODUCT MODAL
+// ═══════════════════════════════════════════════════
+function openProductModal(id) {
+  const p = PRODUCTS.find(x=>x.id===id);
+  if (!p) return;
+  state.currentProduct = p;
+
+  // track category view
+  state.viewedCats[p.cat] = (state.viewedCats[p.cat]||0) + 1;
+  state.viewedCats[p.sub] = (state.viewedCats[p.sub]||0) + 1;
+  state.browseScore = Math.min(100, state.browseScore + 8);
+
+  // Log events
+  logEvent('view_product', p.name, 'ev-view');
+  logEvent('product_detail', `${p.cat} · IDR ${p.price.toLocaleString()}`, 'ev-view');
+
+  // Update ML
+  updateRiskScore();
+  updateSegment();
+  updateRecommendations(p.cat);
+  checkMarketBasket();
+  updateFunnelPosition('Product View');
+  renderProducts(); // re-sort by relevance
+
+  // Render modal
+  const disc = Math.round((1-p.price/p.orig)*100);
+  document.getElementById('pmImg').style.background = p.color;
+  document.getElementById('pmImg').innerHTML = `<span style="font-size:88px">${p.emoji}</span>`;
+  document.getElementById('pmBrand').textContent = p.brand;
+  document.getElementById('pmName').textContent = p.name;
+  document.getElementById('pmPrice').textContent = `IDR ${p.price.toLocaleString()}`;
+  document.getElementById('pmOrig').textContent = disc>0 ? `IDR ${p.orig.toLocaleString()}` : '';
+  document.getElementById('pmDisc').textContent = disc>0 ? `-${disc}%` : '';
+  document.getElementById('pmDesc').textContent = p.desc;
+  document.getElementById('pmTags').innerHTML = p.tags.map(t=>`<span class="pm-tag">${t}</span>`).join('');
+
+  const btn = document.getElementById('pmCartBtn');
+  const inCart = state.cart.some(c=>c.id===p.id);
+  btn.textContent = inCart ? '✓ Already in Cart' : '🛒 Add to Cart';
+  btn.onclick = () => { addToCart(p.id); closeProductModal(); };
+
+  document.getElementById('productModal').classList.add('open');
+}
+function closeProductModal(e) {
+  if (!e || e.target.id==='productModal') {
+    document.getElementById('productModal').classList.remove('open');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CART
+// ═══════════════════════════════════════════════════
+function addToCart(id) {
+  const p = PRODUCTS.find(x=>x.id===id);
+  if (!p) return;
+  const existing = state.cart.find(c=>c.id===id);
+  if (existing) { existing.qty++; }
+  else { state.cart.push({...p, qty:1}); }
+
+  state.browseScore = Math.min(100, state.browseScore + 15);
+  logEvent('add_to_cart', p.name, 'ev-cart');
+  updateCartUI();
+  updateRiskScore();
+  updateSegment();
+  checkMarketBasket();
+  updateFunnelPosition('Add to Cart');
+  showToast(`🛒 ${p.name} added to cart`,'#10b981');
+  renderProducts();
+
+  // Check if should show promo
+  if (state.browseScore > 40 && !state.promoShown) {
+    setTimeout(() => showPromoPopup(), 2500);
+  }
+}
+
+function updateCartUI() {
+  const count = state.cart.reduce((a,c)=>a+c.qty, 0);
+  const total = state.cart.reduce((a,c)=>a+(c.price*c.qty), 0);
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('cartTotal').textContent = `IDR ${total.toLocaleString()}`;
+
+  const container = document.getElementById('cartItemsContainer');
+  const footer = document.getElementById('cartFooter');
+
+  if (state.cart.length === 0) {
+    container.innerHTML = `<div class="cart-empty"><span class="ce-icon">🛒</span><div style="font-weight:600;color:var(--t2)">Cart is empty</div></div>`;
+    footer.style.display = 'none';
+  } else {
+    footer.style.display = 'block';
+    container.innerHTML = state.cart.map(c => `
+      <div class="cart-item">
+        <div class="ci-emoji">${c.emoji}</div>
+        <div class="ci-info">
+          <div class="ci-name">${c.name}</div>
+          <div class="ci-price">IDR ${c.price.toLocaleString()}</div>
+          <div class="ci-qty">
+            <button class="qty-btn" onclick="changeQty(${c.id},-1)">−</button>
+            <span class="qty-num">${c.qty}</span>
+            <button class="qty-btn" onclick="changeQty(${c.id},1)">+</button>
+          </div>
+        </div>
+        <button class="remove-item" onclick="removeFromCart(${c.id})">🗑</button>
+      </div>`).join('');
+  }
+}
+function changeQty(id, d) {
+  const item = state.cart.find(c=>c.id===id);
+  if (!item) return;
+  item.qty = Math.max(0, item.qty + d);
+  if (item.qty === 0) removeFromCart(id);
+  else updateCartUI();
+}
+function removeFromCart(id) {
+  state.cart = state.cart.filter(c=>c.id!==id);
+  logEvent('remove_from_cart','Item removed','ev-view');
+  updateCartUI();
+  updateRiskScore();
+  renderProducts();
+}
+function openCart() { document.getElementById('cartOverlay').classList.add('open'); }
+function closeCart(e) {
+  if (!e || e.target.id==='cartOverlay') document.getElementById('cartOverlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════
+// EVENT STREAMING LOG
+// ═══════════════════════════════════════════════════
+function logEvent(type, text, cssClass) {
+  state.totalEvents++;
+  document.getElementById('abEvents').textContent = `Events: ${state.totalEvents}`;
+
+  const log = document.getElementById('eventLog');
+  const time = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const typeMap = {
+    'view_product':'VIEW','product_detail':'DETAIL',
+    'add_to_cart':'CART','wishlist_add':'WISH',
+    'remove_from_cart':'REMOVE','checkout':'BUY','search':'SEARCH',
+  };
+  const label = typeMap[type] || type.toUpperCase().slice(0,6);
+
+  // if first time, clear placeholder
+  if (state.totalEvents === 1) log.innerHTML = '';
+
+  const el = document.createElement('div');
+  el.className = 'event-item';
+  el.innerHTML = `
+    <span class="ev-type ${cssClass}">${label}</span>
+    <span class="ev-text">${text}</span>
+    <span class="ev-time">${time}</span>`;
+  log.insertBefore(el, log.firstChild);
+  // keep only last 20
+  while (log.children.length > 20) log.removeChild(log.lastChild);
+
+  document.getElementById('evCount').textContent = `${state.totalEvents} events`;
+}
+
+// ═══════════════════════════════════════════════════
+// ML RISK SCORE (Random Forest simulation)
+// ═══════════════════════════════════════════════════
+function updateRiskScore() {
+  const cartItems = state.cart.length;
+  const browseDepth = state.browseScore;
+  const catVariety = Object.keys(state.viewedCats).length;
+
+  // Simulate RF scoring based on features
+  let score = 0;
+  score += Math.min(35, cartItems * 12);      // cart items → strong signal
+  score += Math.min(25, browseDepth * 0.3);   // browse depth
+  score += Math.min(15, catVariety * 3);      // category variety
+  score += Math.random() * 10;               // noise (model uncertainty)
+  score = Math.min(97, Math.max(3, Math.round(score)));
+
+  state.riskScore = score;
+  const circ = 2 * Math.PI * 28; // circumference = 175.9
+  const filled = (score / 100) * circ;
+  const arc = document.getElementById('riskArc');
+  arc.style.strokeDasharray = `${filled} ${circ}`;
+
+  let color, level, action;
+  if (score >= 70) {
+    color = '#22d3ee'; level = '🟢 HIGH Intent'; action = 'Customer likely to purchase. Let them browse naturally.';
+  } else if (score >= 40) {
+    color = '#f59e0b'; level = '🟡 MEDIUM Intent'; action = '⚠️ Consider a 10% promo to push to checkout.';
+  } else {
+    color = '#ef4444'; level = '🔴 LOW Intent'; action = 'Re-engagement email recommended after session.';
+  }
+
+  arc.style.stroke = color;
+  document.getElementById('riskPct').textContent = score + '%';
+  document.getElementById('riskPct').style.color = color;
+  document.getElementById('riskLevel').textContent = level;
+  document.getElementById('riskLevel').style.color = color;
+  document.getElementById('riskAction').textContent = action;
+  document.getElementById('sessionRisk').textContent = score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
+  document.getElementById('sessionRisk').style.color = score >= 70 ? '#22d3ee' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+  // Show ML alert on MEDIUM
+  if (score >= 40 && score < 70 && cartItems > 0) {
+    showMLAlert(`Session scored MEDIUM (${score}%). ${state.cart.length} item(s) in cart. Triggering 10% promo logic via foreachBatch.`);
+  }
+}
+
+function showMLAlert(msg) {
+  const el = document.getElementById('mlAlert');
+  document.getElementById('mlAlertBody').textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ═══════════════════════════════════════════════════
+// KMEANS SEGMENT
+// ═══════════════════════════════════════════════════
+function updateSegment() {
+  const cartValue = state.cart.reduce((a,c)=>a+(c.price*c.qty), 0);
+  const cartCount = state.cart.reduce((a,c)=>a+c.qty, 0);
+  const browseCount = state.totalEvents;
+
+  let segKey, conf;
+  if (cartValue > 2000000) { segKey='vip'; conf=Math.round(82+Math.random()*12); }
+  else if (cartValue > 800000) { segKey='high'; conf=Math.round(75+Math.random()*15); }
+  else if (cartCount > 2) { segKey='mid'; conf=Math.round(65+Math.random()*20); }
+  else if (browseCount > 8 && cartCount === 0) { segKey='low'; conf=Math.round(55+Math.random()*20); }
+  else { segKey='low'; conf=Math.round(45+Math.random()*20); }
+
+  const seg = SEGMENTS[segKey];
+  const card = document.getElementById('segmentCard');
+  card.style.background = `${seg.color}20`;
+  card.style.border = `1px solid ${seg.color}40`;
+  document.getElementById('segName').textContent = seg.icon + ' ' + seg.name;
+  document.getElementById('segDesc').textContent = seg.desc;
+  document.getElementById('segConf').textContent = conf + '%';
+  document.getElementById('segBarFill').style.width = conf + '%';
+  document.getElementById('segBarFill').style.background = seg.fill;
+  document.getElementById('userSegment').textContent = seg.name;
+}
+
+// ═══════════════════════════════════════════════════
+// ALS RECOMMENDATIONS
+// ═══════════════════════════════════════════════════
+function updateRecommendations(cat) {
+  const recs = ALS_RECS[cat] || ALS_RECS.default;
+  const list = document.getElementById('recsList');
+  list.innerHTML = recs.map(r => `
+    <div class="rec-item" onclick="showToast('📦 ${r.name} — ALS recommendation','#6c3fc4')">
+      <div class="rec-emoji">${r.emoji}</div>
+      <div>
+        <div class="rec-name">${r.name}</div>
+        <div class="rec-price">${r.price}</div>
+      </div>
+      <div class="rec-score">${r.score}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// MARKET BASKET ANALYSIS (SQL simulation)
+// ═══════════════════════════════════════════════════
+function checkMarketBasket() {
+  if (state.cart.length === 0) return;
+  const cartSubs = state.cart.map(c=>c.sub);
+  const cartCats = state.cart.map(c=>c.cat);
+
+  let triggeredRule = null;
+  for (const rule of BASKET_RULES) {
+    if (cartSubs.some(s => s.includes(rule.trigger) || s === rule.trigger) ||
+        cartCats.some(c => c === rule.trigger)) {
+      triggeredRule = rule;
+      break;
+    }
+    // Also check by substring
+    if (cartSubs.some(s => rule.trigger === 'Topwear' && (s==='Topwear'||s==='Dress'||s==='Sportswear'||s==='Bottomwear'))) {
+      triggeredRule = BASKET_RULES[0];
+      break;
+    }
+  }
+
+  const alertEl = document.getElementById('basketAlert');
+  const emptyEl = document.getElementById('basketEmpty');
+
+  if (triggeredRule) {
+    document.getElementById('basketConf').textContent =
+      `Confidence: ${triggeredRule.conf} · Lift: ${triggeredRule.lift} (SQL: LATERAL VIEW EXPLODE)`;
+    document.getElementById('basketItems').innerHTML = triggeredRule.items.map(i => `
+      <div class="ba-item">
+        <span>${i}</span>
+        <span class="ba-conf">Lift ${triggeredRule.lift}</span>
+      </div>`).join('');
+    alertEl.classList.add('show');
+    emptyEl.style.display = 'none';
+  } else {
+    alertEl.classList.remove('show');
+    emptyEl.style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CONVERSION FUNNEL POSITION
+// ═══════════════════════════════════════════════════
+function updateFunnelPosition(stage) {
+  document.getElementById('funnelYou').innerHTML =
+    `📍 You are at: <b style="color:#60a5fa">${stage}</b>`;
+}
+
+// ═══════════════════════════════════════════════════
+// PROMO POPUP (ML-triggered)
+// ═══════════════════════════════════════════════════
+function showPromoPopup() {
+  if (state.promoShown) return;
+  state.promoShown = true;
+  const popup = document.getElementById('promoPopup');
+  document.getElementById('promoText').textContent =
+    `Spark ML detected 🟡 MEDIUM conversion intent (${state.riskScore}%). You have items in cart but haven't checked out. Here's a 10% exclusive discount!`;
+  popup.classList.add('show');
+  logEvent('promo_triggered','Medium-risk session discount trigger','ev-wish');
+}
+function usePromo() {
+  state.promoApplied = true;
+  dismissPromo();
+  showToast('🎉 Discount applied! 10% off your order','#10b981');
+  state.browseScore = Math.min(100, state.browseScore + 20);
+  updateRiskScore();
+  logEvent('promo_applied','BUYMORE10 — 10% discount applied','ev-cart');
+}
+function dismissPromo() {
+  document.getElementById('promoPopup').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════
+function handleSearch(q) {
+  state.searchQuery = q;
+  state.filterCat = 'all';
+  state.filterSub = '';
+  if (q) logEvent('search',`"${q}"`, 'ev-view');
+  renderProducts();
+}
+
+// ═══════════════════════════════════════════════════
+// FILTER
+// ═══════════════════════════════════════════════════
+function filterCat(cat, btn) {
+  state.filterCat = cat;
+  state.filterSub = '';
+  state.searchQuery = '';
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  logEvent('category_view', cat, 'ev-view');
+  renderProducts();
+}
+function filterSub(sub, e) {
+  e.stopPropagation();
+  state.filterSub = sub;
+  state.searchQuery = '';
+  document.querySelectorAll('.cat-sub').forEach(b=>b.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  logEvent('subcategory_view', sub, 'ev-view');
+  updateFunnelPosition('Product View');
+  updateRecommendations(PRODUCTS.find(p=>p.sub===sub)?.cat || 'default');
+  renderProducts();
+}
+function handleSort(v) {
+  state.sortMode = v;
+  renderProducts();
+}
+
+// ═══════════════════════════════════════════════════
+// ANALYTICS PANEL TOGGLE
+// ═══════════════════════════════════════════════════
+function togglePanel() {
+  state.panelVisible = !state.panelVisible;
+  const panel = document.getElementById('analyticsPanel');
+  const btn = document.getElementById('panelToggle');
+  panel.classList.toggle('hidden', !state.panelVisible);
+  btn.textContent = state.panelVisible ? 'Hide Analytics ▶' : 'Show Analytics ◀';
+}
+
+// ═══════════════════════════════════════════════════
+// CHECKOUT SIMULATION
+// ═══════════════════════════════════════════════════
+function openCheckout() {
+  closeCart();
+  logEvent('checkout_start','Checkout initiated','ev-buy');
+  updateFunnelPosition('Checkout Start');
+  state.checkoutStep = 1;
+  renderCheckout();
+  document.getElementById('checkoutOverlay').classList.add('open');
+}
+function closeCheckout(e) {
+  if (!e || e.target.id==='checkoutOverlay') document.getElementById('checkoutOverlay').classList.remove('open');
+}
+
+function renderCheckout() {
+  const total = state.cart.reduce((a,c)=>a+(c.price*c.qty),0);
+  const disc  = state.promoApplied ? Math.round(total*0.10) : 0;
+  const final = total - disc;
+
+  const stepsHTML = `
+    <div class="cm-steps">
+      ${['Shipping','Payment','Review'].map((s,i)=>`
+        <div class="cm-step ${state.checkoutStep>i+1?'done':state.checkoutStep===i+1?'active':''}">
+          <div class="cm-step-num">${state.checkoutStep>i+1?'✓':i+1}</div>${s}
+        </div>`).join('')}
+    </div>`;
+
+  let bodyHTML = '';
+  if (state.checkoutStep === 1) {
+    bodyHTML = `
+      <div class="cm-body">
+        <div class="cm-section">
+          <h4>📦 Shipping Details</h4>
+          <div class="cm-row">
+            <input class="cm-input" placeholder="First Name" value="Rina"/>
+            <input class="cm-input" placeholder="Last Name" value="Sari"/>
+          </div>
+          <div class="cm-row">
+            <input class="cm-input" placeholder="Street Address" value="Jl. Sudirman No. 45"/>
+          </div>
+          <div class="cm-row">
+            <input class="cm-input" placeholder="City" value="Jakarta Selatan"/>
+            <input class="cm-input" placeholder="ZIP Code" value="12190"/>
+          </div>
+          <div style="background:#e0f4f5;border-radius:8px;padding:10px 12px;font-size:12px;color:#065f46;margin-top:8px">
+            🚚 Free delivery in 2–3 business days (JNE Regular)
+          </div>
+        </div>
+      </div>
+      <div class="cm-footer">
+        <button class="cm-btn" onclick="nextCheckoutStep()">Continue to Payment →</button>
+      </div>`;
+  } else if (state.checkoutStep === 2) {
+    bodyHTML = `
+      <div class="cm-body">
+        <div class="cm-section">
+          <h4>💳 Payment Method</h4>
+          <div class="pay-method">
+            ${[['credit','💳 Credit Card'],['gopay','🟢 GoPay'],['ovo','💜 OVO'],['bca','🏦 BCA Debit'],['linkaja','🔴 LinkAja']].map(([v,l])=>`
+              <div class="pay-opt ${state.selectedPayment===v?'selected':''}" onclick="selectPayment('${v}')">
+                ${l}
+              </div>`).join('')}
+          </div>
+          ${state.selectedPayment==='credit'?`
+          <div class="cm-row" style="margin-top:10px">
+            <input class="cm-input" placeholder="Card Number" value="4532 1234 5678 9012"/>
+          </div>
+          <div class="cm-row">
+            <input class="cm-input" placeholder="Expiry" value="09/27"/>
+            <input class="cm-input" placeholder="CVV" value="•••"/>
+          </div>
+          `:'<div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;font-size:12px;color:#065f46;margin-top:10px">Redirecting to ' + state.selectedPayment.toUpperCase() + ' payment gateway…</div>'}
+        </div>
+        <div class="cm-section" style="background:#f8fafc;border-radius:10px;padding:12px">
+          <div style="font-size:12px;color:var(--t2);font-weight:700;margin-bottom:8px">Order Summary</div>
+          ${state.cart.map(c=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);margin-bottom:4px">
+            <span>${c.qty}× ${c.name}</span><span>IDR ${(c.price*c.qty).toLocaleString()}</span></div>`).join('')}
+          ${disc>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--green);font-weight:600">
+            <span>Promo BUYMORE10</span><span>−IDR ${disc.toLocaleString()}</span></div>`:''  }
+          <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:var(--navy);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <span>Total</span><span>IDR ${final.toLocaleString()}</span></div>
+        </div>
+      </div>
+      <div class="cm-footer">
+        <button class="cm-btn" onclick="nextCheckoutStep()">Review Order →</button>
+      </div>`;
+  } else if (state.checkoutStep === 3) {
+    bodyHTML = `
+      <div class="cm-body">
+        <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:4px">✅ Order looks good!</div>
+          <div style="font-size:12px;color:var(--t2)">${state.cart.length} item(s) · IDR ${final.toLocaleString()} · ${state.selectedPayment.toUpperCase()}</div>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:6px">SPARK PIPELINE WILL PROCESS:</div>
+          <div style="font-size:11px;color:var(--t2);line-height:2">
+            ⚡ Write transaction to Parquet sink<br>
+            🤖 Update ML training dataset (CONVERTED label)<br>
+            📊 Re-run RFM score (SQL enrichment)<br>
+            🌊 Emit payment_success event to stream<br>
+            👥 Re-classify customer segment (KMeans)
+          </div>
+        </div>
+      </div>
+      <div class="cm-footer">
+        <button class="cm-btn" style="background:var(--green)" onclick="completeOrder()">
+          ✓ Confirm & Pay IDR ${final.toLocaleString()}
+        </button>
+      </div>`;
+  }
+
+  document.getElementById('checkoutContent').innerHTML = stepsHTML + bodyHTML;
+}
+
+function nextCheckoutStep() {
+  state.checkoutStep++;
+  logEvent('checkout_step'+state.checkoutStep,'Step advanced','ev-buy');
+  renderCheckout();
+}
+function selectPayment(v) {
+  state.selectedPayment = v;
+  logEvent('payment_select',v.toUpperCase(),'ev-cart');
+  renderCheckout();
+}
+function completeOrder() {
+  logEvent('purchase','PAYMENT SUCCESS · 95.7% success rate','ev-buy');
+  updateFunnelPosition('✅ Purchase Complete');
+  state.browseScore = 100;
+  updateRiskScore();
+
+  // Show success screen
+  const total = state.cart.reduce((a,c)=>a+(c.price*c.qty),0);
+  const disc  = state.promoApplied ? Math.round(total*0.10) : 0;
+  const final = total - disc;
+  const orderId = 'NM-' + Math.random().toString(36).slice(2,8).toUpperCase();
+
+  document.getElementById('checkoutContent').innerHTML = `
+    <div class="success-screen">
+      <span class="success-icon">🎉</span>
+      <div class="success-title">Payment Successful!</div>
+      <div class="success-sub">
+        Order <b>${orderId}</b> confirmed.<br>
+        <b>IDR ${final.toLocaleString()}</b> paid via ${state.selectedPayment.toUpperCase()}<br>
+        Estimated delivery: 2–3 business days (JNE)
+      </div>
+      <div class="pipeline-events">
+        <div class="pe-line"><span class="pe-tag pe-spark">SPARK</span> Transaction written to Parquet sink ✓</div>
+        <div class="pe-line"><span class="pe-tag pe-ml">ML</span> Session labelled CONVERTED (Random Forest retrain queue) ✓</div>
+        <div class="pe-line"><span class="pe-tag pe-sql">SQL</span> RFM score updated via LAG() window function ✓</div>
+        <div class="pe-line"><span class="pe-tag pe-spark">SPARK</span> payment_success event emitted to stream ✓</div>
+        <div class="pe-line"><span class="pe-tag pe-ml">ML</span> Customer segment re-evaluated: KMeans prediction ✓</div>
+        <div class="pe-line"><span class="pe-tag pe-sql">SQL</span> Conversion funnel updated (CONVERTED label) ✓</div>
+      </div>
+      <button class="cm-btn" onclick="resetAfterOrder()">Continue Shopping →</button>
+    </div>`;
+
+  // Clean up cart
+  state.cart = [];
+  updateCartUI();
+  renderProducts();
+}
+
+function resetAfterOrder() {
+  closeCheckout();
+  state.promoApplied = false;
+  state.promoShown = false;
+  state.browseScore = 0;
+  updateRiskScore();
+  showToast('🎉 Thank you! Your order is on its way.','#10b981');
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+function showToast(msg, bg='#1a1d2e') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.background = bg;
+  el.innerHTML = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>{el.classList.add('removing');setTimeout(()=>el.remove(),300)}, 3000);
+}
+
+// ═══════════════════════════════════════════════════
+// AUTO-SIMULATION (makes the analytics feel live)
+// ═══════════════════════════════════════════════════
+function simulateLiveActivity() {
+  const fakeEvents = [
+    {type:'view_product',text:'Another user: Nike Air Max 270',cls:'ev-view'},
+    {type:'add_to_cart',text:'Another user: H&M Floral Dress',cls:'ev-cart'},
+    {type:'view_product',text:'Another user: Ray-Ban Sunglasses',cls:'ev-view'},
+    {type:'purchase',text:'Order NM-XX9K confirmed · IDR 1,299,000',cls:'ev-buy'},
+    {type:'view_product',text:'Another user: Zara Mini Bag',cls:'ev-view'},
+    {type:'add_to_cart',text:'Another user: Puma Backpack',cls:'ev-cart'},
+  ];
+  let i = 0;
+  setInterval(() => {
+    const ev = fakeEvents[i % fakeEvents.length];
+    // Only add background events when panel is shown
+    if (state.panelVisible) {
+      state.totalEvents++;
+      document.getElementById('abEvents').textContent = `Events: ${state.totalEvents}`;
+      const log = document.getElementById('eventLog');
+      const time = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      if (log.children[0] && log.children[0].textContent.includes('Start browsing')) log.innerHTML='';
+      const el = document.createElement('div');
+      el.className = 'event-item';
+      el.style.opacity = '0.5';
+      el.innerHTML = `
+        <span class="ev-type ${ev.cls}" style="opacity:.6">${ev.type.slice(0,6).toUpperCase()}</span>
+        <span class="ev-text" style="font-style:italic">${ev.text}</span>
+        <span class="ev-time">${time}</span>`;
+      log.appendChild(el);
+      while (log.children.length > 20) log.removeChild(log.firstChild);
+      document.getElementById('evCount').textContent = `${state.totalEvents} events`;
+    }
+    i++;
+  }, 2800);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+renderProducts();
+simulateLiveActivity();
+showToast('🛍️ Welcome to CcMart! Browse products to see AI working in real-time →','#141D4A');
+</script>
+</body>
+</html>

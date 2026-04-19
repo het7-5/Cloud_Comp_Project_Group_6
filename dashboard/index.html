@@ -1,0 +1,801 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CcMart — Business Intelligence Command Center</title>
+  <meta name="description" content="Real-time e-commerce intelligence dashboard. Live orders, customer ML scoring, revenue analytics, and conversion optimization for CcMart Indonesia."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">N</div>
+    <div>
+      <div class="sb-name">CcMart</div>
+      <div class="sb-tag">Business Intelligence</div>
+    </div>
+    <div class="sb-live-pill"><span class="live-dot"></span>LIVE</div>
+  </div>
+
+  <div class="sb-today-box">
+    <div class="sb-today-label">Today's Revenue</div>
+    <div class="sb-today-val" id="sb-revenue">₹ 0</div>
+    <div class="sb-today-sub"><span class="up-arrow">↑</span> <span id="sb-mom">+8.3%</span> vs yesterday</div>
+  </div>
+
+  <nav class="sb-nav">
+    <a class="sb-item active" data-page="ops"><span class="sb-ic">⚡</span>Live Operations</a>
+    <a class="sb-item" data-page="revenue"><span class="sb-ic">💰</span>Revenue & Sales</a>
+    <a class="sb-item" data-page="customers"><span class="sb-ic">👥</span>Customer Intelligence</a>
+    <a class="sb-item" data-page="conversion"><span class="sb-ic">🎯</span>Conversion Center</a>
+    <a class="sb-item" data-page="ml"><span class="sb-ic">🤖</span>ML Predictions</a>
+    <a class="sb-item" data-page="products"><span class="sb-ic">📦</span>Product Analytics</a>
+    <a class="sb-item" data-page="alerts"><span class="sb-ic">🚨</span>Alerts &amp; Actions<span class="sb-badge" id="alertBadge">3</span></a>
+    <a class="sb-item" data-page="pipeline"><span class="sb-ic">⚙️</span>Data Pipeline</a>
+  </nav>
+
+  <div class="sb-foot">
+    <div class="sb-sysstat">
+      <div class="ss-row"><span>Spark Engine</span><span class="ss-ok">● Online</span></div>
+      <div class="ss-row"><span>Stream Latency</span><span class="ss-ok">120ms</span></div>
+      <div class="ss-row"><span>ML Model</span><span class="ss-ok">● Ready</span></div>
+      <div class="ss-row"><span>Last Sync</span><span class="ss-dim" id="lastSync">now</span></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MAIN ─────────────────────────────────── -->
+<main class="main" id="main">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="tb-left">
+      <button class="burger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="tb-crumb" id="crumb">Live Operations</div>
+    </div>
+    <div class="tb-center">
+      <div class="tb-metric" id="tb-users">
+        <span class="tm-val" id="liveUsers">0</span>
+        <span class="tm-lbl">shoppers online</span>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-metric">
+        <span class="tm-val" id="liveOrders">0</span>
+        <span class="tm-lbl">orders today</span>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-metric">
+        <span class="tm-val success-color">95.7%</span>
+        <span class="tm-lbl">payment success</span>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-metric">
+        <span class="tm-val warn-color" id="atRiskCount">0</span>
+        <span class="tm-lbl">sessions at risk</span>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-notif" onclick="switchPage('alerts')">🔔 <span class="notif-dot">3</span></div>
+      <div class="tb-date" id="tbDate"></div>
+      <div class="tb-avatar">OPS</div>
+    </div>
+  </header>
+
+  <!-- ════════ PAGE: LIVE OPERATIONS ════════ -->
+  <section class="page active" id="page-ops">
+    <!-- Hero banner -->
+    <div class="hero-banner">
+      <div class="hero-left">
+        <div class="hero-greeting">Good evening, Operations Team 👋</div>
+        <div class="hero-headline">CcMart is <span class="hero-accent">live</span> — customers are shopping right now</div>
+        <div class="hero-sub">Spark Structured Streaming processing ~<strong>12.8M clickstream events</strong> across 900K sessions</div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-stat-ring">
+          <div class="hsr-inner">
+            <div class="hsr-val" id="heroRev">₹0</div>
+            <div class="hsr-lbl">Revenue Today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live KPI row -->
+    <div class="kpi-row">
+      <div class="kpi" style="--ac:#6366f1">
+        <div class="kpi-icon-wrap" style="background:rgba(99,102,241,0.12)">🛍️</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="kpi-orders">0</div>
+          <div class="kpi-lbl">Orders Placed</div>
+          <div class="kpi-delta up">↑ 12.4% vs yesterday</div>
+        </div>
+        <canvas class="kpi-spark" id="spark-orders" width="80" height="40"></canvas>
+      </div>
+      <div class="kpi" style="--ac:#10b981">
+        <div class="kpi-icon-wrap" style="background:rgba(16,185,129,0.12)">✅</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="kpi-success">0</div>
+          <div class="kpi-lbl">Successful Payments</div>
+          <div class="kpi-delta up">↑ 95.7% success rate</div>
+        </div>
+        <canvas class="kpi-spark" id="spark-success" width="80" height="40"></canvas>
+      </div>
+      <div class="kpi" style="--ac:#f59e0b">
+        <div class="kpi-icon-wrap" style="background:rgba(245,158,11,0.12)">🔴</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="kpi-abandoned">0</div>
+          <div class="kpi-lbl">Cart Abandons</div>
+          <div class="kpi-delta down">↓ Needs attention</div>
+        </div>
+        <canvas class="kpi-spark" id="spark-abandon" width="80" height="40"></canvas>
+      </div>
+      <div class="kpi" style="--ac:#ec4899">
+        <div class="kpi-icon-wrap" style="background:rgba(236,72,153,0.12)">⏱️</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="kpi-sessions">0</div>
+          <div class="kpi-lbl">Active Sessions</div>
+          <div class="kpi-delta up">↑ 14.3 avg events/session</div>
+        </div>
+        <canvas class="kpi-spark" id="spark-sessions" width="80" height="40"></canvas>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="ops-grid">
+
+      <!-- Live Order Feed -->
+      <div class="card order-feed-card">
+        <div class="card-hdr">
+          <div class="card-title">⚡ Live Order Feed</div>
+          <div class="feed-controls">
+            <span class="live-badge">● LIVE</span>
+            <button class="btn-ghost" onclick="toggleFeedPause()" id="feedPauseBtn">⏸ Pause</button>
+          </div>
+        </div>
+        <div class="order-feed" id="orderFeed">
+          <div class="feed-empty">Connecting to stream...</div>
+        </div>
+      </div>
+
+      <!-- Real-time Revenue Chart -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">📈 Revenue (last 30 min)</div>
+          <div class="card-val-big" id="revenueRolling">₹ 0</div>
+        </div>
+        <canvas id="revenueRealtime" height="200"></canvas>
+      </div>
+
+      <!-- Active Sessions Panel -->
+      <div class="card session-card">
+        <div class="card-hdr">
+          <div class="card-title">🧑‍💻 High-Risk Sessions</div>
+          <div class="tag-warn">ML-Detected</div>
+        </div>
+        <div class="session-list" id="sessionList"></div>
+      </div>
+
+      <!-- Hourly heatmap -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🕐 Hourly Activity Heatmap</div>
+          <div class="card-sub">Events per hour · today</div>
+        </div>
+        <div class="heatmap-wrap" id="heatmapWrap"></div>
+      </div>
+
+      <!-- Traffic split -->
+      <div class="card half-card">
+        <div class="card-hdr"><div class="card-title">📱 Traffic Split</div></div>
+        <div class="traffic-donut-wrap">
+          <canvas id="trafficDonut" height="180"></canvas>
+          <div class="donut-legend">
+            <div class="dl-row"><span class="dl-dot" style="background:#6366f1"></span>Android Mobile<strong>68.6%</strong></div>
+            <div class="dl-row"><span class="dl-dot" style="background:#06b6d4"></span>iOS Mobile<strong>21.4%</strong></div>
+            <div class="dl-row"><span class="dl-dot" style="background:#10b981"></span>Web Browser<strong>10.0%</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment mix -->
+      <div class="card half-card">
+        <div class="card-hdr"><div class="card-title">💳 Payment Method Mix</div></div>
+        <div class="pay-bars" id="payBars">
+          <div class="pay-row"><span class="pay-name">Credit Card</span><div class="pay-bar-wrap"><div class="pay-bar" style="width:44%;--bc:#6366f1"></div></div><span class="pay-pct">44%</span></div>
+          <div class="pay-row"><span class="pay-name">GoPay</span><div class="pay-bar-wrap"><div class="pay-bar" style="width:25%;--bc:#10b981"></div></div><span class="pay-pct">25%</span></div>
+          <div class="pay-row"><span class="pay-name">OVO</span><div class="pay-bar-wrap"><div class="pay-bar" style="width:24%;--bc:#06b6d4"></div></div><span class="pay-pct">24%</span></div>
+          <div class="pay-row"><span class="pay-name">Debit Card</span><div class="pay-bar-wrap"><div class="pay-bar" style="width:19%;--bc:#8b5cf6"></div></div><span class="pay-pct">20%</span></div>
+          <div class="pay-row"><span class="pay-name">LinkAja</span><div class="pay-bar-wrap"><div class="pay-bar" style="width:11%;--bc:#f59e0b"></div></div><span class="pay-pct">11%</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: REVENUE & SALES ════════ -->
+  <section class="page" id="page-revenue">
+    <div class="page-head">
+      <div>
+        <h1>💰 Revenue &amp; Sales Analytics</h1>
+        <p>Historical trends · Payment analysis · MoM growth · Region breakdown</p>
+      </div>
+      <div class="page-head-right">
+        <select class="sel" id="revPeriod" onchange="updateRevenuePage()">
+          <option value="all">2016 – 2022 (All)</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Summary KPIs -->
+    <div class="summary-kpis">
+      <div class="skpi" style="--ac:#10b981">
+        <div class="skpi-val">₹449B IDR</div>
+        <div class="skpi-lbl">Total Cumulative Revenue</div>
+        <div class="skpi-sub">2016 – July 2022</div>
+      </div>
+      <div class="skpi" style="--ac:#6366f1">
+        <div class="skpi-val">850,000</div>
+        <div class="skpi-lbl">Total Transactions</div>
+        <div class="skpi-sub">95.7% payment success</div>
+      </div>
+      <div class="skpi" style="--ac:#f59e0b">
+        <div class="skpi-val">₹551K IDR</div>
+        <div class="skpi-lbl">Average Order Value</div>
+        <div class="skpi-sub">Across all payment methods</div>
+      </div>
+      <div class="skpi" style="--ac:#06b6d4">
+        <div class="skpi-val">+14.5%</div>
+        <div class="skpi-lbl">Peak MoM Growth</div>
+        <div class="skpi-sub">March 2022</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-hdr">
+          <div class="card-title">📊 Monthly Revenue Trend</div>
+          <div class="toggle-group">
+            <button class="tgl active" data-mode="revenue" onclick="revToggle(this,'revenue')">Revenue</button>
+            <button class="tgl" data-mode="growth"  onclick="revToggle(this,'growth')">MoM Growth %</button>
+            <button class="tgl" data-mode="cumulative" onclick="revToggle(this,'cumulative')">Cumulative</button>
+          </div>
+        </div>
+        <canvas id="mainRevChart" height="120"></canvas>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">💳 Payment Methods</div></div>
+        <canvas id="payMethodChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🏆 Customer Segments by Revenue</div></div>
+        <canvas id="segRevChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📅 Peak Hours</div></div>
+        <canvas id="peakHrsChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Payment table -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">📋 Payment Method Deep Dive</div></div>
+      <table class="tbl">
+        <thead><tr><th>Payment Method</th><th>Transactions</th><th>Revenue (IDR)</th><th>Avg AOV</th><th>Success Rate</th><th>Trend</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pay-tag" style="background:rgba(99,102,241,0.12);color:#a5b4fc">💳 Credit Card</span></td><td>286,692</td><td>₹157.6B</td><td>₹549,870</td><td><span class="pill green">✓ 95.7%</span></td><td>↑ Stable</td></tr>
+          <tr><td><span class="pay-tag" style="background:rgba(16,185,129,0.12);color:#6ee7b7">📱 GoPay</span></td><td>163,947</td><td>₹89.8B</td><td>₹547,967</td><td><span class="pill green">✓ 95.8%</span></td><td>↑ Growing</td></tr>
+          <tr><td><span class="pay-tag" style="background:rgba(6,182,212,0.12);color:#67e8f9">💜 OVO</span></td><td>162,008</td><td>₹89.1B</td><td>₹550,159</td><td><span class="pill green">✓ 95.8%</span></td><td>↑ Growing</td></tr>
+          <tr><td><span class="pay-tag" style="background:rgba(139,92,246,0.12);color:#c4b5fd">🏦 Debit Card</span></td><td>131,311</td><td>₹72.4B</td><td>₹551,550</td><td><span class="pill green">✓ 95.7%</span></td><td>→ Stable</td></tr>
+          <tr><td><span class="pay-tag" style="background:rgba(245,158,11,0.12);color:#fcd34d">🔗 LinkAja</span></td><td>72,006</td><td>₹40.0B</td><td>₹554,977</td><td><span class="pill warn">! 95.5%</span></td><td>↓ Lowest</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: CUSTOMER INTELLIGENCE ════════ -->
+  <section class="page" id="page-customers">
+    <div class="page-head">
+      <div><h1>👥 Customer Intelligence</h1><p>KMeans RFM segmentation · 100K customers · Behavioral profiling</p></div>
+    </div>
+
+    <div class="four-col">
+      <div class="card cust-hero" style="--ac:#6366f1">
+        <div class="ch-num">100,000</div><div class="ch-lbl">Total Customers</div>
+        <div class="ch-split"><span>Female 64.2%</span><span>Male 35.8%</span></div>
+      </div>
+      <div class="card cust-hero" style="--ac:#10b981">
+        <div class="ch-num">50,242</div><div class="ch-lbl">Segmented Customers</div>
+        <div class="ch-split"><span>k=5 clusters</span><span>0.63 silhouette</span></div>
+      </div>
+      <div class="card cust-hero" style="--ac:#f59e0b">
+        <div class="ch-num">1,827</div><div class="ch-lbl">Power Buyers</div>
+        <div class="ch-split"><span>128 avg txns</span><span>₹71.2M avg spend</span></div>
+      </div>
+      <div class="card cust-hero" style="--ac:#ec4899">
+        <div class="ch-num">27,861</div><div class="ch-lbl">VIP Customers</div>
+        <div class="ch-split"><span>₹424.9B revenue</span><span>5+ orders</span></div>
+      </div>
+    </div>
+
+    <!-- Segment cards -->
+    <div class="segment-row">
+      <div class="seg-card" style="--sc:#6366f1">
+        <div class="sc-top">
+          <div class="sc-cluster">Cluster 0</div>
+          <div class="sc-name">Casual Shoppers</div>
+          <div class="sc-pct-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="#6366f1" stroke-width="3" stroke-dasharray="62.5 37.5" stroke-dashoffset="25" transform="rotate(-90 18 18)"/></svg><span>62.5%</span></div>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><span>Customers</span><strong>31,397</strong></div>
+          <div class="scs"><span>Avg Spend</span><strong>₹2.59M</strong></div>
+          <div class="scs"><span>Avg Txns</span><strong>5.2</strong></div>
+          <div class="scs"><span>Avg AOV</span><strong>₹460K</strong></div>
+        </div>
+        <div class="sc-action">💡 Re-engagement email campaign</div>
+      </div>
+      <div class="seg-card" style="--sc:#06b6d4">
+        <div class="sc-top">
+          <div class="sc-cluster">Cluster 1</div>
+          <div class="sc-name">Budget Shoppers</div>
+          <div class="sc-pct-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="#06b6d4" stroke-width="3" stroke-dasharray="5.1 94.9" stroke-dashoffset="25" transform="rotate(-90 18 18)"/></svg><span>5.1%</span></div>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><span>Customers</span><strong>2,539</strong></div>
+          <div class="scs"><span>Avg Spend</span><strong>₹383K</strong></div>
+          <div class="scs"><span>Avg Txns</span><strong>1.7</strong></div>
+          <div class="scs"><span>Avg AOV</span><strong>₹217K</strong></div>
+        </div>
+        <div class="sc-action">💡 Entry-level vouchers &amp; deals</div>
+      </div>
+      <div class="seg-card" style="--sc:#f59e0b">
+        <div class="sc-top">
+          <div class="sc-cluster">Cluster 2</div>
+          <div class="sc-name">Power Buyers</div>
+          <div class="sc-pct-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="3.6 96.4" stroke-dashoffset="25" transform="rotate(-90 18 18)"/></svg><span>3.6%</span></div>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><span>Customers</span><strong>1,827</strong></div>
+          <div class="scs"><span>Avg Spend</span><strong>₹71.2M</strong></div>
+          <div class="scs"><span>Avg Txns</span><strong>128.4</strong></div>
+          <div class="scs"><span>Avg AOV</span><strong>₹558K</strong></div>
+        </div>
+        <div class="sc-action">💡 VIP early access &amp; concierge</div>
+      </div>
+      <div class="seg-card" style="--sc:#10b981">
+        <div class="sc-top">
+          <div class="sc-cluster">Cluster 3</div>
+          <div class="sc-name">Regular Customers</div>
+          <div class="sc-pct-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="24.3 75.7" stroke-dashoffset="25" transform="rotate(-90 18 18)"/></svg><span>24.3%</span></div>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><span>Customers</span><strong>12,193</strong></div>
+          <div class="scs"><span>Avg Spend</span><strong>₹18.4M</strong></div>
+          <div class="scs"><span>Avg Txns</span><strong>33.3</strong></div>
+          <div class="scs"><span>Avg AOV</span><strong>₹562K</strong></div>
+        </div>
+        <div class="sc-action">💡 Subscription perks &amp; bulk offers</div>
+      </div>
+      <div class="seg-card" style="--sc:#ec4899">
+        <div class="sc-top">
+          <div class="sc-cluster">Cluster 4</div>
+          <div class="sc-name">Big-Ticket Buyers</div>
+          <div class="sc-pct-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="#ec4899" stroke-width="3" stroke-dasharray="4.5 95.5" stroke-dashoffset="25" transform="rotate(-90 18 18)"/></svg><span>4.5%</span></div>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><span>Customers</span><strong>2,286</strong></div>
+          <div class="scs"><span>Avg Spend</span><strong>₹5.26M</strong></div>
+          <div class="scs"><span>Avg Txns</span><strong>2.9</strong></div>
+          <div class="scs"><span>Avg AOV</span><strong>₹2.05M</strong></div>
+        </div>
+        <div class="sc-action">💡 Premium launches &amp; personal styling</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📊 Cluster Size Breakdown</div></div>
+        <canvas id="clusterBarChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🏆 Top 15 Customers by LTV</div></div>
+        <canvas id="ltvBarChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🏆 Customer Lifetime Value Leaderboard</div><div class="tag-gold">Top 15 · SQL DENSE_RANK()</div></div>
+      <table class="tbl">
+        <thead><tr><th>Rank</th><th>Customer</th><th>Orders</th><th>Lifetime Value</th><th>Avg AOV</th><th>Member Since</th><th>Segment</th></tr></thead>
+        <tbody id="ltvTbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: CONVERSION CENTER ════════ -->
+  <section class="page" id="page-conversion">
+    <div class="page-head">
+      <div><h1>🎯 Conversion Center</h1><p>Real-time funnel analysis · Drop-off detection · Promo effectiveness</p></div>
+    </div>
+
+    <div class="three-col">
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-hdr"><div class="card-title">🔽 Live Conversion Funnel</div><div class="card-sub">895,203 total sessions · 14.3 avg events</div></div>
+        <div class="funnel-container">
+          <div class="funnel-step" style="--fw:100%;--fc:#6366f1;--fn:895203">
+            <div class="fs-bar"><div class="fs-fill"></div></div>
+            <div class="fs-info"><span class="fs-icon">🏠</span><span class="fs-label">Homepage Visit</span><span class="fs-num">895,203</span><span class="fs-pct">100%</span></div>
+          </div>
+          <div class="funnel-arrow">↓ <span class="fa-drop drop-ok">▼ 28% drop</span></div>
+          <div class="funnel-step" style="--fw:72%;--fc:#8b5cf6;--fn:644546">
+            <div class="fs-bar"><div class="fs-fill"></div></div>
+            <div class="fs-info"><span class="fs-icon">👁</span><span class="fs-label">Product View</span><span class="fs-num">644,546</span><span class="fs-pct">72%</span></div>
+          </div>
+          <div class="funnel-arrow">↓ <span class="fa-drop drop-warn">▼ 33% drop</span></div>
+          <div class="funnel-step" style="--fw:48%;--fc:#06b6d4;--fn:429697">
+            <div class="fs-bar"><div class="fs-fill"></div></div>
+            <div class="fs-info"><span class="fs-icon">🛒</span><span class="fs-label">Add to Cart</span><span class="fs-num">429,697</span><span class="fs-pct">48%</span></div>
+          </div>
+          <div class="funnel-arrow">↓ <span class="fa-drop drop-danger">▼ 42% drop — Critical!</span></div>
+          <div class="funnel-step" style="--fw:28%;--fc:#f59e0b;--fn:250457">
+            <div class="fs-bar"><div class="fs-fill"></div></div>
+            <div class="fs-info"><span class="fs-icon">💳</span><span class="fs-label">Checkout Initiated</span><span class="fs-num">250,457</span><span class="fs-pct">28%</span></div>
+          </div>
+          <div class="funnel-arrow">↓ <span class="fa-drop drop-ok">▼ 50% payment success</span></div>
+          <div class="funnel-step" style="--fw:14%;--fc:#10b981;--fn:125000">
+            <div class="fs-bar"><div class="fs-fill"></div></div>
+            <div class="fs-info"><span class="fs-icon">✅</span><span class="fs-label">Order Confirmed</span><span class="fs-num">~125,000</span><span class="fs-pct">14%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Funnel insights -->
+    <div class="insight-row">
+      <div class="insight-card danger">
+        <div class="ic-icon">🚨</div>
+        <div class="ic-title">Cart → Checkout: 42% Drop</div>
+        <div class="ic-body">This is your largest drop-off. Customers adding items but not proceeding. Likely friction at payment selection or shipping cost reveal.</div>
+        <div class="ic-action">💡 Action: Simplify checkout · Show shipping cost earlier · Try one-click checkout</div>
+      </div>
+      <div class="insight-card warn">
+        <div class="ic-icon">⚠️</div>
+        <div class="ic-title">Medium-Risk Sessions: 43.5%</div>
+        <div class="ic-body">ML model identifies 43.5% of active sessions as on-the-fence. A 10% discount push at this stage historically boosts conversion by 15-20%.</div>
+        <div class="ic-action">💡 Action: Trigger real-time 10% discount push notification</div>
+      </div>
+      <div class="insight-card ok">
+        <div class="ic-icon">✅</div>
+        <div class="ic-title">Promo Success Rate: Uniform 95.7%</div>
+        <div class="ic-body">Promo codes do NOT hurt payment success rates. They do increase avg order value slightly. Safe to deploy aggressively.</div>
+        <div class="ic-action">💡 Action: Expand promo code campaigns to mid-funnel users</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🏷️ Promo Code Performance</div></div>
+        <canvas id="promoChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📊 Funnel Stage Labels (ML-enhanced)</div></div>
+        <div class="funnel-labels">
+          <div class="fl-row" style="--flc:#10b981">
+            <div class="fl-dot"></div>
+            <div class="fl-content">
+              <div class="fl-title">CONVERTED</div>
+              <div class="fl-desc">Funnel score ≥ 3 + payment success</div>
+            </div>
+            <div class="fl-pct">~14%</div>
+          </div>
+          <div class="fl-row" style="--flc:#f59e0b">
+            <div class="fl-dot"></div>
+            <div class="fl-content">
+              <div class="fl-title">HIGH_INTENT_DROPPED</div>
+              <div class="fl-desc">Viewed, carted, but abandoned checkout</div>
+            </div>
+            <div class="fl-pct">~20%</div>
+          </div>
+          <div class="fl-row" style="--flc:#8b5cf6">
+            <div class="fl-dot"></div>
+            <div class="fl-content">
+              <div class="fl-title">MID_FUNNEL</div>
+              <div class="fl-desc">Browsing actively, not yet at cart</div>
+            </div>
+            <div class="fl-pct">~34%</div>
+          </div>
+          <div class="fl-row" style="--flc:#6b7280">
+            <div class="fl-dot"></div>
+            <div class="fl-content">
+              <div class="fl-title">TOP_FUNNEL_ONLY</div>
+              <div class="fl-desc">Homepage visitors, passive scrollers</div>
+            </div>
+            <div class="fl-pct">~32%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: ML PREDICTIONS ════════ -->
+  <section class="page" id="page-ml">
+    <div class="page-head">
+      <div><h1>🤖 ML Predictions Dashboard</h1><p>Live RandomForest conversion scoring · ALS recommendations · RFM clustering · Payment classifier</p></div>
+    </div>
+
+    <!-- Live scoring feed -->
+    <div class="ml-hero">
+      <div class="ml-hero-left">
+        <div class="ml-hero-title">⚡ Real-Time Conversion Predictor</div>
+        <div class="ml-hero-sub">RandomForest (50 trees, depth=6) · In-memory model · foreachBatch streaming</div>
+        <div class="ml-score-grid" id="mlScoreGrid"></div>
+        <button class="btn-primary mt-12" onclick="refreshMLScores()">🔄 Refresh Scores</button>
+      </div>
+      <div class="ml-hero-right">
+        <canvas id="mlPredDonut" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Session Scorer -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🔮 Interactive Session Scorer</div><div class="tag-ml">RF Model</div></div>
+        <div class="scorer-wrap">
+          <div class="scorer-inputs">
+            <div class="si-row"><label>Events in Session</label><input type="range" id="si-ev" min="1" max="50" value="12" oninput="score()"><span id="si-ev-v">12</span></div>
+            <div class="si-row"><label>Viewed Product</label><label class="sw"><input type="checkbox" id="si-view" checked onchange="score()"><span class="sl"></span></label></div>
+            <div class="si-row"><label>Added to Cart</label><label class="sw"><input type="checkbox" id="si-cart" onchange="score()"><span class="sl"></span></label></div>
+            <div class="si-row"><label>Used Search</label><label class="sw"><input type="checkbox" id="si-srch" checked onchange="score()"><span class="sl"></span></label></div>
+            <div class="si-row"><label>Applied Promo</label><label class="sw"><input type="checkbox" id="si-promo" onchange="score()"><span class="sl"></span></label></div>
+            <div class="si-row"><label>Traffic Source</label>
+              <select id="si-src" onchange="score()"><option value="mobile">Mobile</option><option value="web">Web</option></select>
+            </div>
+          </div>
+          <div class="scorer-result-wrap">
+            <div class="score-meter" id="scoreMeter">
+              <svg viewBox="0 0 200 120" class="meter-svg">
+                <defs>
+                  <linearGradient id="meterGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#ef4444"/>
+                    <stop offset="50%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#10b981"/>
+                  </linearGradient>
+                </defs>
+                <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" stroke-linecap="round"/>
+                <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="url(#meterGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="267" stroke-dashoffset="267" id="meterArc"/>
+                <text x="100" y="85" text-anchor="middle" fill="white" font-size="28" font-weight="800" font-family="Inter" id="meterPct">0%</text>
+                <text x="100" y="104" text-anchor="middle" fill="#9ca3cc" font-size="11" font-family="Inter">Conversion Probability</text>
+              </svg>
+            </div>
+            <div class="scorer-label" id="scorerLabel"></div>
+            <div class="scorer-action" id="scorerAction"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model comparison -->
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📊 Classifier Model Comparison</div><div class="tag-ml">MLlib Pipeline</div></div>
+        <canvas id="modelCompareChart" height="180"></canvas>
+        <div class="model-table">
+          <table class="tbl compact">
+            <thead><tr><th>Model</th><th>AUC</th><th>F1</th><th>Accuracy</th><th>Winner</th></tr></thead>
+            <tbody>
+              <tr><td>Logistic Regression</td><td>0.5031</td><td>0.7367</td><td>63.0%</td><td>—</td></tr>
+              <tr class="hl"><td>Random Forest</td><td>0.4926</td><td>0.9314</td><td>95.4%</td><td><span class="pill green">Best F1</span></td></tr>
+              <tr><td>Gradient-Boosted Trees</td><td>0.5226</td><td>0.7259</td><td>61.6%</td><td><span class="pill purple">Best AUC</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALS Recommender -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">✨ ALS Collaborative Recommender — Top-5 Per Customer</div>
+        <div class="rec-selector">
+          <select id="recSel" onchange="loadRecs()" class="sel">
+            <option value="power">Power Buyer (Cluster 2)</option>
+            <option value="casual">Casual Shopper (Cluster 0)</option>
+            <option value="bigticket">Big-Ticket Buyer (Cluster 4)</option>
+          </select>
+        </div>
+      </div>
+      <div class="rec-shelf" id="recShelf"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: PRODUCTS ════════ -->
+  <section class="page" id="page-products">
+    <div class="page-head">
+      <div><h1>📦 Product Analytics</h1><p>44,000 products · Category performance · Market basket · Browse-to-buy affinity</p></div>
+    </div>
+
+    <div class="three-col">
+      <div class="card" style="grid-column:span 2">
+        <div class="card-hdr"><div class="card-title">📊 Category Revenue Performance</div></div>
+        <canvas id="catRevChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🏷️ Catalog Split</div></div>
+        <canvas id="catSplitChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🛒 Market Basket — Frequently Bought Together</div><div class="tag-sql">SQL: LATERAL VIEW EXPLODE</div></div>
+        <div class="basket-list">
+          <div class="ba-item">
+            <div class="ba-prods"><span class="ba-prod" style="--bpc:#6366f1">👗 Apparel/Topwear</span><span class="ba-link">↔</span><span class="ba-prod" style="--bpc:#10b981">👟 Footwear/Sports</span></div>
+            <div class="ba-metrics"><span class="ba-m">Support <strong>4.2%</strong></span><span class="ba-m">Confidence <strong>68%</strong></span><span class="ba-m lift-up">Lift ↑ 2.3x</span></div>
+          </div>
+          <div class="ba-item">
+            <div class="ba-prods"><span class="ba-prod" style="--bpc:#8b5cf6">👜 Accessories/Bags</span><span class="ba-link">↔</span><span class="ba-prod" style="--bpc:#f59e0b">👗 Apparel/Dresses</span></div>
+            <div class="ba-metrics"><span class="ba-m">Support <strong>3.8%</strong></span><span class="ba-m">Confidence <strong>61%</strong></span><span class="ba-m lift-up">Lift ↑ 1.9x</span></div>
+          </div>
+          <div class="ba-item">
+            <div class="ba-prods"><span class="ba-prod" style="--bpc:#06b6d4">🕶️ Accessories/Eyewear</span><span class="ba-link">↔</span><span class="ba-prod" style="--bpc:#ec4899">👒 Accessories/Headwear</span></div>
+            <div class="ba-metrics"><span class="ba-m">Support <strong>2.9%</strong></span><span class="ba-m">Confidence <strong>55%</strong></span><span class="ba-m lift-up">Lift ↑ 1.7x</span></div>
+          </div>
+          <div class="ba-item">
+            <div class="ba-prods"><span class="ba-prod" style="--bpc:#10b981">👟 Footwear/Sports</span><span class="ba-link">↔</span><span class="ba-prod" style="--bpc:#6366f1">🎽 Apparel/Sportswear</span></div>
+            <div class="ba-metrics"><span class="ba-m">Support <strong>2.1%</strong></span><span class="ba-m">Confidence <strong>49%</strong></span><span class="ba-m lift-up">Lift ↑ 1.5x</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🔍 Browse-to-Buy Affinity</div><div class="tag-sql">4-Table JOIN</div></div>
+        <div class="affinity-grid">
+          <div class="aff-header"><span>Browsed Category</span><span class="aff-arrow">→</span><span>Purchased Category</span><span>Lift %</span></div>
+          <div class="aff-row"><span>Apparel/Topwear</span><span class="aff-arrow">→</span><span>Footwear/Casual</span><span class="aff-pct up">+82%</span></div>
+          <div class="aff-row"><span>Accessories/Bags</span><span class="aff-arrow">→</span><span>Apparel/Dresses</span><span class="aff-pct up">+71%</span></div>
+          <div class="aff-row"><span>Footwear/Sports</span><span class="aff-arrow">→</span><span>Apparel/Sportswear</span><span class="aff-pct up">+65%</span></div>
+          <div class="aff-row"><span>Apparel/Dresses</span><span class="aff-arrow">→</span><span>Accessories/Jewellery</span><span class="aff-pct up">+58%</span></div>
+          <div class="aff-row"><span>Personal Care</span><span class="aff-arrow">→</span><span>Apparel/Innerwear</span><span class="aff-pct mid">+31%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trending now -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🔥 Trending Products (Live Clickstream)</div><span class="live-badge">● LIVE</span></div>
+      <div class="trending-grid" id="trendingGrid"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: ALERTS ════════ -->
+  <section class="page" id="page-alerts">
+    <div class="page-head">
+      <div><h1>🚨 Alerts &amp; Smart Actions</h1><p>ML-generated recommendations · Anomaly detection · Business optimization opportunities</p></div>
+    </div>
+
+    <div class="alerts-summary">
+      <div class="as-item critical"><div class="as-count" id="critCount">1</div><div>Critical</div></div>
+      <div class="as-item warn"><div class="as-count" id="warnCount">2</div><div>Warning</div></div>
+      <div class="as-item info"><div class="as-count">5</div><div>Insights</div></div>
+      <div class="as-item ok"><div class="as-count">12</div><div>Actions Done</div></div>
+    </div>
+
+    <div class="alerts-grid" id="alertsGrid"></div>
+
+    <!-- Action Center -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">⚡ Recommended Actions Right Now</div><div class="tag-ml">ML-powered</div></div>
+      <div class="action-center" id="actionCenter"></div>
+    </div>
+
+    <!-- Anomaly feed -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🔍 Session Anomaly Detection</div><div class="card-sub">mean + 2σ threshold · Spark Streaming</div></div>
+      <div class="anomaly-feed" id="anomalyFeed"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: DATA PIPELINE ════════ -->
+  <section class="page" id="page-pipeline">
+    <div class="page-head">
+      <div><h1>⚙️ Data Pipeline Control</h1><p>Apache Spark · Structured Streaming · MLlib · Click any module to run</p></div>
+    </div>
+
+    <!-- Pipeline Architecture visual -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🏗️ End-to-End Pipeline Architecture</div></div>
+      <div class="pipeline-arch">
+        <div class="pa-step" style="--pac:#6366f1"><div class="pa-icon">📥</div><div class="pa-name">Raw Data</div><div class="pa-tech">CSV → Parquet</div></div>
+        <div class="pa-conn"></div>
+        <div class="pa-step" style="--pac:#8b5cf6"><div class="pa-icon">🔍</div><div class="pa-name">Ingestion &amp; EDA</div><div class="pa-tech">Spark DataFrame API</div></div>
+        <div class="pa-conn"></div>
+        <div class="pa-step" style="--pac:#06b6d4"><div class="pa-icon">⚡</div><div class="pa-name">SQL Analysis</div><div class="pa-tech">6 Complex Queries</div></div>
+        <div class="pa-conn"></div>
+        <div class="pa-step" style="--pac:#10b981"><div class="pa-icon">🤖</div><div class="pa-name">ML Pipeline</div><div class="pa-tech">RF · ALS · KMeans</div></div>
+        <div class="pa-conn"></div>
+        <div class="pa-step" style="--pac:#f59e0b"><div class="pa-icon">🌊</div><div class="pa-name">Streaming</div><div class="pa-tech">Struct. Streaming</div></div>
+        <div class="pa-conn"></div>
+        <div class="pa-step" style="--pac:#ec4899"><div class="pa-icon">📊</div><div class="pa-name">This Dashboard</div><div class="pa-tech">Real-time BI</div></div>
+      </div>
+    </div>
+
+    <!-- Module runner -->
+    <div class="module-grid">
+      <div class="mod-card" onclick="runMod('ingestion')" id="mod-ingestion">
+        <div class="mod-status-bar" id="modbar-ingestion"></div>
+        <div class="mod-icon">📥</div>
+        <div class="mod-name">Data Ingestion</div>
+        <div class="mod-cmd">python -m src.ingestion</div>
+        <div class="mod-desc">Auto-detect Kaggle 2GB dataset or generate synthetic data. Outputs Parquet.</div>
+        <div class="mod-status-lbl" id="modstt-ingestion">IDLE</div>
+      </div>
+      <div class="mod-card" onclick="runMod('eda')" id="mod-eda">
+        <div class="mod-status-bar" id="modbar-eda"></div>
+        <div class="mod-icon">🔍</div>
+        <div class="mod-name">EDA Analysis</div>
+        <div class="mod-cmd">python -m src.eda</div>
+        <div class="mod-desc">Generate 5 analysis charts. Customer, product, transaction, clickstream, cross-table.</div>
+        <div class="mod-status-lbl" id="modstt-eda">IDLE</div>
+      </div>
+      <div class="mod-card" onclick="runMod('transformations')" id="mod-transformations">
+        <div class="mod-status-bar" id="modbar-transformations"></div>
+        <div class="mod-icon">⚡</div>
+        <div class="mod-name">SQL Transformations</div>
+        <div class="mod-cmd">python -m src.transformations</div>
+        <div class="mod-desc">6 advanced Spark SQL queries: LTV, RFM, cohort, basket, velocity, affinity.</div>
+        <div class="mod-status-lbl" id="modstt-transformations">IDLE</div>
+      </div>
+      <div class="mod-card" onclick="runMod('ml_pipeline')" id="mod-ml_pipeline">
+        <div class="mod-status-bar" id="modbar-ml_pipeline"></div>
+        <div class="mod-icon">🤖</div>
+        <div class="mod-name">ML Pipeline</div>
+        <div class="mod-cmd">python -m src.ml_pipeline</div>
+        <div class="mod-desc">Train RF classifier, ALS recommender, RFM KMeans clustering.</div>
+        <div class="mod-status-lbl" id="modstt-ml_pipeline">IDLE</div>
+      </div>
+      <div class="mod-card" onclick="runMod('streaming')" id="mod-streaming">
+        <div class="mod-status-bar" id="modbar-streaming"></div>
+        <div class="mod-icon">🌊</div>
+        <div class="mod-name">Structured Streaming</div>
+        <div class="mod-cmd">python -m src.streaming</div>
+        <div class="mod-desc">Stream-static JOIN · windowed aggregation · session anomaly detection.</div>
+        <div class="mod-status-lbl" id="modstt-streaming">IDLE</div>
+      </div>
+      <div class="mod-card" onclick="runMod('streaming_predictions')" id="mod-streaming_predictions">
+        <div class="mod-status-bar" id="modbar-streaming_predictions"></div>
+        <div class="mod-icon">⚡</div>
+        <div class="mod-name">Streaming ML Predictions</div>
+        <div class="mod-cmd">python -m src.streaming_predictions</div>
+        <div class="mod-desc">Batch train RandomForest → in-memory → real-time foreachBatch scoring.</div>
+        <div class="mod-status-lbl" id="modstt-streaming_predictions">IDLE</div>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>&nbsp; Terminal Output</div>
+        <button class="btn-ghost" onclick="clearTerm()">Clear</button>
+      </div>
+      <div class="terminal" id="terminal">
+        <div class="tl prompt">$ CcMart Data Pipeline v1.0 — Ready</div>
+        <div class="tl info">$ Click any module card above to simulate execution.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
