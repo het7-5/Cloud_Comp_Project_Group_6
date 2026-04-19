@@ -1,8 +1,8 @@
 """
 Tests for the Spark SQL transformations module.
-Validates that queries execute successfully and return expected structure.
-Note: Some queries may return 0 rows on sample data due to column parsing
-differences, but they work correctly on the real dataset.
+Validates that advanced queries execute successfully and return expected structure.
+Note: Some queries may return 0 rows on sample data due to small data sizes,
+but they will execute SQL without syntax errors, which is what we're testing.
 """
 
 import os
@@ -47,67 +47,60 @@ def registered_views(spark):
     return True
 
 
-class TestRevenueByCategory:
+class TestCustomerConversionFunnel:
     def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_revenue_by_category_season
-        result = query_revenue_by_category_season(spark)
-        # Should execute without errors; may have 0 rows on sample data
+        from src.transformations import query_customer_conversion_funnel
+        result = query_customer_conversion_funnel(spark)
         assert result is not None
 
-    def test_has_ranking(self, spark, registered_views):
-        from src.transformations import query_revenue_by_category_season
-        result = query_revenue_by_category_season(spark)
-        assert "revenue_rank" in result.columns
+    def test_has_columns(self, spark, registered_views):
+        from src.transformations import query_customer_conversion_funnel
+        result = query_customer_conversion_funnel(spark)
+        expected = {"customer_id", "total_product_events", "converted"}
+        assert expected.issubset(set(result.columns))
 
 
-class TestCustomerLTV:
+class TestMarketBasket:
     def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_customer_ltv
-        result = query_customer_ltv(spark)
-        assert result is not None
-
-    def test_has_ltv_rank(self, spark, registered_views):
-        from src.transformations import query_customer_ltv
-        result = query_customer_ltv(spark)
-        assert "ltv_rank" in result.columns
-        assert "lifetime_value" in result.columns
-
-
-class TestPromoEffectiveness:
-    def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_promo_effectiveness
-        result = query_promo_effectiveness(spark)
+        from src.transformations import query_market_basket
+        result = query_market_basket(spark)
         assert result is not None
 
 
-class TestMonthlyRevenue:
+class TestCohortRetention:
     def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_monthly_revenue_trend
-        result = query_monthly_revenue_trend(spark)
+        from src.transformations import query_cohort_retention
+        result = query_cohort_retention(spark)
         assert result is not None
 
-    def test_has_growth_columns(self, spark, registered_views):
-        from src.transformations import query_monthly_revenue_trend
-        result = query_monthly_revenue_trend(spark)
-        assert "cumulative_revenue" in result.columns
-        assert "mom_growth_pct" in result.columns
+    def test_has_columns(self, spark, registered_views):
+        from src.transformations import query_cohort_retention
+        result = query_cohort_retention(spark)
+        assert "cohort_month" in result.columns
 
 
-class TestClickstreamFunnel:
+class TestRFMScoring:
     def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_clickstream_funnel
-        result = query_clickstream_funnel(spark)
-        assert result is not None
-
-
-class TestRevenueByCountrySegment:
-    def test_query_executes(self, spark, registered_views):
-        from src.transformations import query_revenue_by_country_segment
-        result = query_revenue_by_country_segment(spark)
-        # May return 0 rows on sample data (home_country column parsed differently)
+        from src.transformations import query_rfm_scoring
+        result = query_rfm_scoring(spark)
         assert result is not None
 
     def test_has_segments(self, spark, registered_views):
-        from src.transformations import query_revenue_by_country_segment
-        result = query_revenue_by_country_segment(spark)
-        assert "customer_segment" in result.columns
+        from src.transformations import query_rfm_scoring
+        result = query_rfm_scoring(spark)
+        expected = {"customer_id", "rfm_segment"}
+        assert expected.issubset(set(result.columns))
+
+
+class TestPurchaseVelocity:
+    def test_query_executes(self, spark, registered_views):
+        from src.transformations import query_purchase_velocity
+        result = query_purchase_velocity(spark)
+        assert result is not None
+
+
+class TestProductAffinity:
+    def test_query_executes(self, spark, registered_views):
+        from src.transformations import query_product_affinity
+        result = query_product_affinity(spark)
+        assert result is not None
