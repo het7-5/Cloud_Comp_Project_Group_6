@@ -2,7 +2,7 @@
 
 ## Course Project: Data Analysis with Apache Spark
 
-### CcMart - E-Commerce Transaction Analytics Pipeline
+### Group 6 - E-Commerce Transaction Analytics Pipeline
 
 An end-to-end big data analytics pipeline built with Apache Spark to analyze transactional e-commerce data. The pipeline processes customer behavior, product catalogs, transactions, and clickstream data to generate actionable business insights, predictive models, and a real-time streaming intelligence layer.
 
@@ -123,7 +123,7 @@ dashboard/simulation.html  -> Live e-commerce simulation with analytics panel
 #### Generate Presentation
 ```bash
 python generate_final_ppt.py
-# Output: dashboard/CcMart_Final_Presentation.pptx (12 slides)
+# Output: dashboard/Group 6_Final_Presentation.pptx (12 slides)
 ```
 
 ---
@@ -144,7 +144,7 @@ python generate_final_ppt.py
 │   ├── limitations.md
 │   ├── reproduction_guide.md
 │   └── slides/
-│       └── CcMart_Final_Presentation.pptx
+│       └── Group 6_Final_Presentation.pptx
 ├── notebooks/
 │   ├── ingestion.ipynb      # Data ingestion walkthrough
 │   ├── eda.ipynb            # EDA with code + findings
@@ -170,9 +170,9 @@ python generate_final_ppt.py
 │   ├── simulation.html      # Live e-commerce simulation
 │   ├── app.js               # Dashboard JavaScript
 │   ├── style.css            # Dashboard styles
-│   └── CcMart_Final_Presentation.pptx
+│   └── Group 6_Final_Presentation.pptx
 ├── outputs/                 # Generated visualisations & results (auto-generated)
-├── generate_final_ppt.py    # Generates CcMart_Final_Presentation.pptx
+├── generate_final_ppt.py    # Generates Group 6_Final_Presentation.pptx
 ├── requirements.txt
 ├── Makefile
 └── run.sh

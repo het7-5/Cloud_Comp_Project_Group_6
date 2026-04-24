@@ -1,0 +1,7 @@
+{
+  "customers": 100000,
+  "products": 44446,
+  "transactions": 1254585,
+  "clickstream": 12833602,
+  "sessions": 895203
+}

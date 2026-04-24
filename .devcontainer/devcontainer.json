@@ -1,11 +1,23 @@
 {
-  "name": "CcMart",
+  "name": "Group 6",
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
       "version": "11"
     }
   },
   "postCreateCommand": "curl -L -o /usr/local/python/3.12.1/lib/python3.12/site-packages/pyspark/jars/hadoop-aws-3.3.4.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && curl -L -o /usr/local/python/3.12.1/lib/python3.12/site-packages/pyspark/jars/aws-java-sdk-bundle-1.12.262.jar https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar",
+  "forwardPorts": [8501, 8000],
+  "portsAttributes": {
+    "8501": {
+      "label": "Streamlit Dashboard",
+      "visibility": "public",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "PPT Server",
+      "visibility": "public"
+    }
+  },
   "remoteEnv": {
     "JAVA_HOME": "/usr/lib/jvm/java-11-openjdk-amd64",
     "JAVA_TOOL_OPTIONS": "--add-opens=java.base/javax.security.auth=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"

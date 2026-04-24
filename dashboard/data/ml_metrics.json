@@ -1,0 +1,31 @@
+{
+  "random_forest": {
+    "accuracy": 0.9423,
+    "f1": 0.9288,
+    "auc_roc": 0.7659,
+    "feature_importances": {
+      "added_to_cart": 0.6355,
+      "session_duration_mins": 0.2204,
+      "total_events": 0.113,
+      "used_promo": 0.0296,
+      "num_keywords": 0.0008,
+      "did_search": 0.0005,
+      "traffic_vec": 0.0,
+      "visited_homepage": 0.0
+    }
+  },
+  "kmeans": {
+    "silhouette": 0.7129,
+    "k": 5
+  },
+  "als": {
+    "rmse": 4.36,
+    "interactions": 1889569,
+    "users": 50705,
+    "items": 44446,
+    "sparsity_pct": 99.92,
+    "rank": 8,
+    "maxIter": 5,
+    "regParam": 0.1
+  }
+}

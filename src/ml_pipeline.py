@@ -317,9 +317,9 @@ def run_als_recommendations(spark, top_n=5):
 
 def run_ml_pipeline():
     ensure_dirs()
-    spark = get_spark_session("CcMart-ML")
+    spark = get_spark_session("Group6-ML")
     print("\n" + "=" * 60)
-    print("  CcMart ML PIPELINE")
+    print("  Group 6 ML PIPELINE")
     print("=" * 60)
     print(f"  Processed data: {_processed_dir()}")
 

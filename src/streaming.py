@@ -159,7 +159,7 @@ def run_streaming(timeout_seconds=60):
             shutil.rmtree(d)
         os.makedirs(d, exist_ok=True)
 
-    spark = get_spark_session("CcMart-Streaming")
+    spark = get_spark_session("Group6-Streaming")
     spark.conf.set("spark.sql.streaming.checkpointLocation",
                    STREAM_CHECKPOINT_DIR)
 
@@ -295,7 +295,7 @@ def run_streaming(timeout_seconds=60):
 
 def run_full_streaming_demo(max_events=500, delay_ms=50, timeout_seconds=60):
     print("\n" + "=" * 60)
-    print("  🌊 CcMart STREAMING DEMO")
+    print("  🌊 Group 6 STREAMING DEMO")
     print("=" * 60)
     stream_simulator(max_events=max_events, delay_ms=delay_ms)
     try:

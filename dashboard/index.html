@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CcMart — Business Intelligence Command Center</title>
-  <meta name="description" content="Real-time e-commerce intelligence dashboard. Live orders, customer ML scoring, revenue analytics, and conversion optimization for CcMart Indonesia."/>
+  <title>Group 6 — Business Intelligence Command Center</title>
+  <meta name="description" content="Real-time e-commerce intelligence dashboard. Live orders, customer ML scoring, revenue analytics, and conversion optimization for Group 6 Indonesia."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -18,7 +18,7 @@
   <div class="sb-brand">
     <div class="sb-logo">N</div>
     <div>
-      <div class="sb-name">CcMart</div>
+      <div class="sb-name">Group 6</div>
       <div class="sb-tag">Business Intelligence</div>
     </div>
     <div class="sb-live-pill"><span class="live-dot"></span>LIVE</div>
@@ -38,6 +38,7 @@
     <a class="sb-item" data-page="ml"><span class="sb-ic">🤖</span>ML Predictions</a>
     <a class="sb-item" data-page="products"><span class="sb-ic">📦</span>Product Analytics</a>
     <a class="sb-item" data-page="alerts"><span class="sb-ic">🚨</span>Alerts &amp; Actions<span class="sb-badge" id="alertBadge">3</span></a>
+    <a class="sb-item" data-page="growth"><span class="sb-ic">📈</span>Growth Strategy</a>
     <a class="sb-item" data-page="pipeline"><span class="sb-ic">⚙️</span>Data Pipeline</a>
   </nav>
 
@@ -88,13 +89,47 @@
     </div>
   </header>
 
+  <!-- ════════ CEO BANNER (persistent across pages) ════════ -->
+  <div id="ceoBanner" style="display:flex;gap:10px;padding:12px 24px;background:linear-gradient(90deg,#0b0d1f 0%,#1a1032 100%);border-bottom:1px solid rgba(255,255,255,0.05);flex-wrap:wrap">
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#ef4444;font-weight:700;letter-spacing:1px">REVENUE AT RISK · NOW</div>
+      <div id="ceo-risk" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div id="ceo-risk-sub" style="font-size:11px;color:#9ea3c8;margin-top:2px">— sessions abandoning</div>
+    </div>
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(16,185,129,0.1);border-left:3px solid #10b981;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#10b981;font-weight:700;letter-spacing:1px">REVENUE RECOVERED · TODAY</div>
+      <div id="ceo-recovered" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div id="ceo-recovered-sub" style="font-size:11px;color:#9ea3c8;margin-top:2px">via — interventions</div>
+    </div>
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(99,102,241,0.1);border-left:3px solid #6366f1;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#6366f1;font-weight:700;letter-spacing:1px">7-DAY FORECAST</div>
+      <div id="ceo-forecast" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div id="ceo-lift" style="font-size:11px;color:#10b981;margin-top:2px">net lift from platform</div>
+    </div>
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#f59e0b;font-weight:700;letter-spacing:1px">CHURN RISK · VIPs</div>
+      <div id="ceo-churn" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div id="ceo-churn-sub" style="font-size:11px;color:#9ea3c8;margin-top:2px">— saved today</div>
+    </div>
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(139,92,246,0.1);border-left:3px solid #8b5cf6;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#8b5cf6;font-weight:700;letter-spacing:1px">CONVERSION RATE</div>
+      <div id="ceo-conv" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div id="ceo-aov" style="font-size:11px;color:#9ea3c8;margin-top:2px">AOV: —</div>
+    </div>
+    <div class="ceo-card" style="flex:1;min-width:170px;background:rgba(6,182,212,0.1);border-left:3px solid #06b6d4;padding:10px 14px;border-radius:8px">
+      <div style="font-size:10px;color:#06b6d4;font-weight:700;letter-spacing:1px">AVG CLV</div>
+      <div id="ceo-clv" style="font-size:22px;color:white;font-weight:800;margin-top:2px">—</div>
+      <div style="font-size:11px;color:#9ea3c8;margin-top:2px">per customer</div>
+    </div>
+  </div>
+
   <!-- ════════ PAGE: LIVE OPERATIONS ════════ -->
   <section class="page active" id="page-ops">
     <!-- Hero banner -->
     <div class="hero-banner">
       <div class="hero-left">
         <div class="hero-greeting">Good evening, Operations Team 👋</div>
-        <div class="hero-headline">CcMart is <span class="hero-accent">live</span> — customers are shopping right now</div>
+        <div class="hero-headline">Group 6 is <span class="hero-accent">live</span> — customers are shopping right now</div>
         <div class="hero-sub">Spark Structured Streaming processing ~<strong>12.8M clickstream events</strong> across 900K sessions</div>
       </div>
       <div class="hero-right">
@@ -615,6 +650,90 @@
       </div>
       <div class="rec-shelf" id="recShelf"></div>
     </div>
+
+    <!-- Model Validation — Train/Test split with $-impact confusion matrix -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">✅ Model Validation · Held-out Test Set (20%)</div>
+          <div class="tag-ml">Train 716 K · Test 179 K</div>
+        </div>
+        <div style="padding:12px 4px">
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">
+            <div style="background:rgba(16,185,129,0.12);padding:14px;border-radius:8px;border-left:3px solid #10b981">
+              <div style="font-size:10px;color:#10b981;font-weight:700;letter-spacing:1px">TRUE POSITIVE · $ saved</div>
+              <div id="mv-tp" style="font-size:20px;color:white;font-weight:800;margin-top:4px">—</div>
+              <div id="mv-tp-n" style="font-size:11px;color:#9ea3c8">— sessions correctly flagged → intervention recovered $</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.12);padding:14px;border-radius:8px;border-left:3px solid #ef4444">
+              <div style="font-size:10px;color:#ef4444;font-weight:700;letter-spacing:1px">FALSE NEGATIVE · $ lost</div>
+              <div id="mv-fn" style="font-size:20px;color:white;font-weight:800;margin-top:4px">—</div>
+              <div id="mv-fn-n" style="font-size:11px;color:#9ea3c8">— sessions missed → revenue leaked</div>
+            </div>
+            <div style="background:rgba(245,158,11,0.12);padding:14px;border-radius:8px;border-left:3px solid #f59e0b">
+              <div style="font-size:10px;color:#f59e0b;font-weight:700;letter-spacing:1px">FALSE POSITIVE · $ wasted promo</div>
+              <div id="mv-fp" style="font-size:20px;color:white;font-weight:800;margin-top:4px">—</div>
+              <div id="mv-fp-n" style="font-size:11px;color:#9ea3c8">— promos given to converting users (acceptable cost)</div>
+            </div>
+            <div style="background:rgba(99,102,241,0.12);padding:14px;border-radius:8px;border-left:3px solid #6366f1">
+              <div style="font-size:10px;color:#6366f1;font-weight:700;letter-spacing:1px">TRUE NEGATIVE</div>
+              <div id="mv-tn" style="font-size:20px;color:white;font-weight:800;margin-top:4px">—</div>
+              <div id="mv-tn-n" style="font-size:11px;color:#9ea3c8">— correctly left alone</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(16,185,129,0.08);border-radius:6px">
+            <span style="color:#9ea3c8">Net impact vs no-ML baseline</span>
+            <span id="mv-net" style="color:#10b981;font-weight:800;font-size:18px">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- What-If simulator — CEO-grade threshold tuning -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🎛️ What-If Simulator · Threshold Tuning</div>
+          <div class="tag-ml">Live business-impact forecast</div>
+        </div>
+        <div style="padding:14px 4px">
+          <div class="si-row"><label>RF confidence threshold</label>
+            <input type="range" id="wi-thr" min="30" max="90" value="50" oninput="whatIf()">
+            <span id="wi-thr-v">50%</span>
+          </div>
+          <div class="si-row"><label>Discount offered</label>
+            <input type="range" id="wi-disc" min="5" max="25" value="10" oninput="whatIf()">
+            <span id="wi-disc-v">10%</span>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="color:#9ea3c8">Sessions intervened</span>
+              <span id="wi-n" style="color:white;font-weight:700">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="color:#9ea3c8">Expected conversion lift</span>
+              <span id="wi-lift" style="color:#10b981;font-weight:700">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="color:#9ea3c8">Revenue recovered</span>
+              <span id="wi-rev" style="color:#10b981;font-weight:700">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="color:#9ea3c8">Promo cost (FP × discount)</span>
+              <span id="wi-cost" style="color:#f59e0b;font-weight:700">—</span>
+            </div>
+            <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:8px 0">
+            <div style="display:flex;justify-content:space-between">
+              <span style="color:white;font-weight:700">NET IMPACT</span>
+              <span id="wi-net" style="color:#10b981;font-weight:900;font-size:20px">—</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:#9ea3c8;line-height:1.5">
+            💡 Higher threshold = fewer interventions but cleaner targeting.
+            Lower threshold = recover more revenue but higher promo cost.
+            <b>Sweet spot around 50%</b> matches our test-set analysis.
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ════════ PAGE: PRODUCTS ════════ -->
@@ -680,28 +799,139 @@
   <!-- ════════ PAGE: ALERTS ════════ -->
   <section class="page" id="page-alerts">
     <div class="page-head">
-      <div><h1>🚨 Alerts &amp; Smart Actions</h1><p>ML-generated recommendations · Anomaly detection · Business optimization opportunities</p></div>
+      <div><h1>🚨 CEO Command Center</h1><p>$-impact-ranked actions · ML confidence · Execute with one click</p></div>
     </div>
 
     <div class="alerts-summary">
-      <div class="as-item critical"><div class="as-count" id="critCount">1</div><div>Critical</div></div>
-      <div class="as-item warn"><div class="as-count" id="warnCount">2</div><div>Warning</div></div>
-      <div class="as-item info"><div class="as-count">5</div><div>Insights</div></div>
-      <div class="as-item ok"><div class="as-count">12</div><div>Actions Done</div></div>
+      <div class="as-item critical"><div class="as-count" id="critCount">1</div><div>Critical ($)</div></div>
+      <div class="as-item warn"><div class="as-count" id="warnCount">2</div><div>High Value</div></div>
+      <div class="as-item info"><div class="as-count" id="infoCount">0</div><div>Opportunities</div></div>
+      <div class="as-item ok"><div class="as-count" id="doneCount">0</div><div>Executed Today</div></div>
     </div>
 
-    <div class="alerts-grid" id="alertsGrid"></div>
-
-    <!-- Action Center -->
+    <!-- $-ranked command center (richer than alertsGrid) -->
     <div class="card">
-      <div class="card-hdr"><div class="card-title">⚡ Recommended Actions Right Now</div><div class="tag-ml">ML-powered</div></div>
-      <div class="action-center" id="actionCenter"></div>
+      <div class="card-hdr">
+        <div class="card-title">⚡ Ranked by $-Impact · Execute in one click</div>
+        <div class="tag-ml">Powered by Spark MLlib + Structured Streaming</div>
+      </div>
+      <div id="commandCenter"></div>
     </div>
 
-    <!-- Anomaly feed -->
+    <!-- Channel performance -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📊 Channel Performance (live)</div></div>
+        <div id="channelTable"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🔍 Session Anomaly Detection</div><div class="card-sub">μ+2σ threshold · Spark Streaming</div></div>
+        <div class="anomaly-feed" id="anomalyFeed"></div>
+      </div>
+    </div>
+
+    <div class="alerts-grid" id="alertsGrid" style="display:none"></div>
+    <div id="actionCenter" style="display:none"></div>
+  </section>
+
+  <!-- ════════ PAGE: GROWTH STRATEGY ════════ -->
+  <section class="page" id="page-growth">
+    <div class="page-head">
+      <div><h1>📈 Growth Strategy</h1><p>Predictive models to build · Loss prevention · Growth levers — each backed by data we already have</p></div>
+    </div>
+
+    <!-- Forecast hero -->
     <div class="card">
-      <div class="card-hdr"><div class="card-title">🔍 Session Anomaly Detection</div><div class="card-sub">mean + 2σ threshold · Spark Streaming</div></div>
-      <div class="anomaly-feed" id="anomalyFeed"></div>
+      <div class="card-hdr">
+        <div class="card-title">🔮 90-Day Revenue Forecast · with 90% CI bands</div>
+        <div class="tag-ml">BG/NBD + Prophet ensemble</div>
+      </div>
+      <canvas id="forecastChart" height="120"></canvas>
+    </div>
+
+    <!-- KPI row for growth signals -->
+    <div class="kpi-row">
+      <div class="kpi" style="--ac:#ef4444">
+        <div class="kpi-icon-wrap" style="background:rgba(239,68,68,0.12)">💔</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="gr-churn">—</div>
+          <div class="kpi-lbl">Churn Risk $ · this quarter</div>
+          <div class="kpi-delta down" id="gr-churn-sub">Σ(P(churn) × CLV)</div>
+        </div>
+      </div>
+      <div class="kpi" style="--ac:#10b981">
+        <div class="kpi-icon-wrap" style="background:rgba(16,185,129,0.12)">🎯</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="gr-promo-eff">—</div>
+          <div class="kpi-lbl">Promo Efficiency · on test data</div>
+          <div class="kpi-delta up" id="gr-promo-sub">TP$ / (TP$ + FP$)</div>
+        </div>
+      </div>
+      <div class="kpi" style="--ac:#f59e0b">
+        <div class="kpi-icon-wrap" style="background:rgba(245,158,11,0.12)">📦</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="gr-stockout">—</div>
+          <div class="kpi-lbl">Categories at Stock-out Risk</div>
+          <div class="kpi-delta down">days-of-inventory &lt; 7</div>
+        </div>
+      </div>
+      <div class="kpi" style="--ac:#8b5cf6">
+        <div class="kpi-icon-wrap" style="background:rgba(139,92,246,0.12)">👑</div>
+        <div class="kpi-body">
+          <div class="kpi-num" id="gr-vip">—</div>
+          <div class="kpi-lbl">VIP Health · active / total</div>
+          <div class="kpi-delta up" id="gr-vip-sub">early-warning monitor</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three-column section: Predictive / Loss / Growth -->
+    <div class="three-col">
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🧠 Predictive Models to Build</div>
+          <div class="tag-ml">MLlib Pipeline</div>
+        </div>
+        <div id="growthPredictive" class="init-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🛡️ Loss Prevention</div>
+          <div class="tag-ml">Anomaly · Risk</div>
+        </div>
+        <div id="growthLoss" class="init-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🚀 Growth Levers</div>
+          <div class="tag-ml">Attribution · Expansion</div>
+        </div>
+        <div id="growthLevers" class="init-list"></div>
+      </div>
+    </div>
+
+    <!-- Category stock-out detail -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📦 Category Days-of-Inventory</div></div>
+        <canvas id="stockChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">💰 Expected $ Lift per Initiative</div>
+          <div class="card-sub">annualised, based on 2025 run-rate</div>
+        </div>
+        <canvas id="liftChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- 30-day priority stack -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">🎯 30-Day Priority Stack · Ship Order</div>
+        <div class="tag-ml">CEO-ranked by ROI</div>
+      </div>
+      <div id="priorityStack"></div>
     </div>
   </section>
 
@@ -788,7 +1018,7 @@
         <button class="btn-ghost" onclick="clearTerm()">Clear</button>
       </div>
       <div class="terminal" id="terminal">
-        <div class="tl prompt">$ CcMart Data Pipeline v1.0 — Ready</div>
+        <div class="tl prompt">$ Group 6 Data Pipeline v1.0 — Ready</div>
         <div class="tl info">$ Click any module card above to simulate execution.</div>
       </div>
     </div>
