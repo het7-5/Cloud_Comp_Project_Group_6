@@ -184,10 +184,10 @@ python generate_final_ppt.py
 
 **Group 6**
 
-| Name | Role |
-|------|------|
-| | |
-| | |
-| | |
-| | |
-| | |
+| Name           |
+|----------------|
+| Het Patel      |
+| Pratik Nichit  |
+| Sunaina Agarwal|
+| Vishwas Yaditi |
+| Eshwar Dudala  |
