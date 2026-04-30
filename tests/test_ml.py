@@ -43,14 +43,17 @@ class TestClassificationFeatures:
     def test_has_required_columns(self, spark, ensure_sample_data):
         from src.ml_pipeline import build_classification_features
         df = build_classification_features(spark)
-        required = {"total_amount", "payment_method", "payment_status"}
+        # session-level features produced by the current pipeline
+        required = {"label", "total_events", "session_duration_mins",
+                    "added_to_cart", "did_search", "traffic_source",
+                    "num_keywords"}
         assert required.issubset(set(df.columns))
 
     def test_target_values(self, spark, ensure_sample_data):
         from src.ml_pipeline import build_classification_features
         df = build_classification_features(spark)
-        statuses = [r.payment_status for r in df.select("payment_status").distinct().collect()]
-        assert set(statuses).issubset({"Success", "Failed"})
+        labels = {row.label for row in df.select("label").distinct().collect()}
+        assert labels.issubset({0.0, 1.0})
 
 
 class TestClusteringFeatures:
